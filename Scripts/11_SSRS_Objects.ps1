@@ -62,6 +62,7 @@ Write-host "Server $SQLInstance"
 # Preload SQL PS module
 import-module "sqlps" -DisableNameChecking -erroraction SilentlyContinue
 
+set-location $BaseFolder
 
 # Create output folder
 $folderPath = "$BaseFolder\$sqlinstance"
@@ -78,24 +79,31 @@ $mySQL =
     WITH ItemContentBinaries AS
     (
       SELECT
-         ItemID,Name,[Type]
-        ,CASE Type
+         ItemID,
+         ParentID,
+         Name,
+         [Type],
+         CASE Type
            WHEN 2 THEN 'Report'
            WHEN 5 THEN 'Data Source'
            WHEN 7 THEN 'Report Part'
            WHEN 8 THEN 'Shared Dataset'
            ELSE 'Other'
-         END AS TypeDescription
-        ,CONVERT(varbinary(max),Content) AS Content
+         END AS TypeDescription,
+         CONVERT(varbinary(max),Content) AS Content
       FROM ReportServer.dbo.Catalog
       WHERE Type IN (2,5,7,8)
     ),
+
     --The second CTE strips off the BOM if it exists...
     ItemContentNoBOM AS
     (
       SELECT
-         ItemID,Name,[Type],TypeDescription
-        ,CASE
+         ParentID,
+         Name,
+         [Type],
+         TypeDescription,
+         CASE
            WHEN LEFT(Content,3) = 0xEFBBBF
              THEN CONVERT(varbinary(max),SUBSTRING(Content,4,LEN(Content)))
            ELSE
@@ -103,20 +111,29 @@ $mySQL =
          END AS Content
       FROM ItemContentBinaries
     )
+
     --The outer query gets the content in its varbinary, varchar and xml representations...
     SELECT
-       --ItemID,
-       Name
-      ,[Type]
-      ,TypeDescription
-      ,Content --varbinary
-      ,CONVERT(varchar(max),Content) AS ContentVarchar --varchar
-      ,CONVERT(xml,Content) AS ContentXML --xml
+       ParentID,
+       Name,
+       [Type],
+       TypeDescription,
+       Content, --varbinary
+       CONVERT(varchar(max),Content) AS ContentVarchar, --varchar
+       CONVERT(xml,Content) AS ContentXML --xml
     FROM ItemContentNoBOM
     order by 2
 "
 
+$sqlToplevelfolders = "
+SELECT [ItemId],[ParentID],[Path]
+  FROM [ReportServer].[dbo].[Catalog]
+  where Parentid is not null and [Type] = 1  
+"
+
+
 $Packages = @()
+$toplevelfolders = @()
 
 if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
 {
@@ -151,6 +168,7 @@ Write-host "Using SQL Auth"
     }
 
     $Packages +=  Invoke-Sqlcmd -MaxCharLength 10000000 -ServerInstance $SQLInstance -Username $myuser -Password $mypass -Query $mySQL
+    $toplevelfolders = Invoke-Sqlcmd -MaxCharLength 10000000 -ServerInstance $SQLInstance  -Username $myuser -Password $mypass  -Query $sqlToplevelfolders
 
 }
 else
@@ -183,6 +201,7 @@ else
     }
 
     $Packages +=  Invoke-Sqlcmd -MaxCharLength 10000000 -ServerInstance $SQLInstance -Query $mySQL
+    $toplevelfolders = Invoke-Sqlcmd -MaxCharLength 10000000 -ServerInstance $SQLInstance -Query $sqlToplevelfolders
 
 }
 
@@ -224,12 +243,73 @@ if(!(test-path -path $fullfolderPathSecurity))
 # --------
 Write-Host "Writing RDL.."
 
+# Create Folder Structure to mirror SSRS ReportServer Catalog while dumping RDL into the respective folders
+foreach ($tlfolder in $toplevelfolders)
+{
+    # Only Script out the Items for this Folder
+    # Create Folder Structure
+    $myNewStruct = $fullfolderPathRDL+$tlfolder.Path
+    # Fixup forward slashes
+    $myNewStruct = $myNewStruct.replace('/','\')
+    if(!(test-path -path $myNewStruct))
+    {
+        mkdir $myNewStruct | Out-Null
+    }
+
+    # Only Script out the Items for this Folder
+    $myParentID = $tlfolder.ItemID
+    Foreach ($pkg in $Packages)
+    {
+        if ($pkg.ParentID -eq $myParentID)
+        {
+            # Report RDL
+            if ($pkg.Type -eq 2)
+            {    
+                #Export
+                $pkgName = $Pkg.name
+                $pkg.ContentXML | Out-File -Force -encoding ascii -FilePath "$myNewStruct\$pkgName.rdl"
+            }
+
+            # Data Source
+            if ($pkg.Type -eq 5)
+            {    
+
+                # Export
+                $pkgName = $Pkg.name
+                $pkg.ContentXML | Out-File -Force -encoding ascii -FilePath "$myNewStruct\$pkgName.dsrc.txt"
+            }
+
+            # Shared Dataset
+            if ($pkg.Type -eq 8)
+            {    
+
+                $pkgName = $Pkg.name
+                $pkg.ContentXML | Out-File -Force -encoding ascii -FilePath "$myNewStruct\$pkgName.shdset.txt"
+            }
+
+            # Other Types include
+            # 3 - File/Resource
+            # 4 - Linked Report
+            # 6 - Model
+            # 7 - 
+            # 9 - 
+
+        }
+    }
+
+
+}
+
+<#
 Foreach ($pkg in $Packages)
 {
     $pkgName = $Pkg.name
-    $fullfolderPath = "$BaseFolder\$sqlinstance\11 - SSRS"
-    $pkg.ContentXML | Out-File -Force -encoding ascii -FilePath "$fullfolderPath\rdl\$pkgName.rdl"
+   
+    $pkg.ContentXML | Out-File -Force -encoding ascii -FilePath "$fullfolderPathRDL\Reports\$pkgName.rdl"
 }
+
+#>
+
 
 # ------------------------
 # 2) SSRS Configuration
