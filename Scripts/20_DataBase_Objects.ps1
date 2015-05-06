@@ -259,7 +259,7 @@ foreach($sqlDatabase in $srv.databases)
     #>
 
     
-    # All Database Properties
+    # Export Database Properties    
     $DBSettingsPath = $output_path+"\Settings"
 
     if(!(test-path -path $DBSettingsPath))
@@ -267,8 +267,45 @@ foreach($sqlDatabase in $srv.databases)
         mkdir $DBSettingsPath | Out-Null	
     }
 
-    New-Item "$DBSettingsPath\Database_Settings.txt" -type file -force  |Out-Null
+    # Create some CSS for help in column formatting
+    $myCSS = 
+    "
+    table
+        {
+            Margin: 0px 0px 0px 4px;
+            Border: 1px solid rgb(190, 190, 190);
+            Font-Family: Tahoma;
+            Font-Size: 9pt;
+            Background-Color: rgb(252, 252, 252);
+        }
+    tr:hover td
+        {
+            Background-Color: rgb(150, 150, 220);
+            Color: rgb(255, 255, 255);
+        }
+    tr:nth-child(even)
+        {
+            Background-Color: rgb(242, 242, 242);
+        }
+    th
+        {
+            Text-Align: Left;
+            Color: rgb(150, 150, 220);
+            Padding: 1px 4px 1px 4px;
+        }
+    td
+        {
+            Vertical-Align: Top;
+            Padding: 1px 4px 1px 4px;
+        }
+    "
+
+    $myCSS | out-file "$DBSettingsPath\HTMLReport.css" -Encoding ascii
+   
     # Export DB Settings
+    Write-Host "$fixedDBName - Settings"
+    <#
+    New-Item "$DBSettingsPath\Database_Settings.txt" -type file -force  |Out-Null
     [int]$i = 0
     [int]$mypropcount = $db.Properties.Count
     $myproperties = $db.Properties |Sort-Object -Property name
@@ -280,6 +317,10 @@ foreach($sqlDatabase in $srv.databases)
         $mypropval+=  $myproperties[$i].Value
         $mypropname[$i]+": "+$mypropval[$i] | out-file "$DBSettingsPath\Database_Settings.txt" -Encoding ascii -Append
     }
+    #>
+
+    $mySettings = $db.Properties
+    $mySettings | sort-object Name | select Name, Value | ConvertTo-Html  -CSSUri "$DBSettingsPath\HTMLReport.css"| Set-Content "$DBSettingsPath\HtmlReport.html"
     
 
     # Tables
