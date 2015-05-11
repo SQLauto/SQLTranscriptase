@@ -6,10 +6,10 @@
     Runs all other Powershell ps1 scripts for the target server    
 	
 .EXAMPLE
-    00_RunAllScriptsDBOnly.ps1 localhost
+    00_RunAllScriptsSecurityOnly.ps1 localhost
 	
 .EXAMPLE
-    00_RunAllScriptsDBOnly.ps1 server01 sa password
+    00_RunAllScriptsSecurityOnly.ps1 server01 sa password
 
 .Inputs
     ServerName, [SQLUser], [SQLPassword]
@@ -98,7 +98,9 @@ else
 
 set-location "$BaseFolder"
 
-& .\20_DataBase_Objects.ps1 $SQLInstance $myuser $mypass
+& .\12_Security_Audit.ps1 $SQLInstance $myuser $mypass
+& .\02_Linked_Servers.ps1 $SQLInstance $myuser $mypass
+& .\07_Service_Creds.ps1 $SQLInstance $myuser $mypass
 
 
 set-location "$BaseFolder"
