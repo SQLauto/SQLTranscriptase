@@ -60,20 +60,13 @@ $sql =
 SELECT
     'EXEC master.dbo.sp_addlinkedserver @server=N'+CHAR(39)+serv.NAME+CHAR(39)+
 	', @srvproduct=N'+CHAR(39)+serv.product+CHAR(39)+
+	case serv.product when 'SQL Server' then '' else ', @provider=N'+char(39)+serv.provider+CHAR(39) END +
 	', @datasrc=N'+CHAR(39)+serv.data_source+CHAR(39)+
-	case serv.product when 'SQL Server' then '' else ', @provider=N'+CHAR(39)+'SQLNCLI'+CHAR(39) END +
 	CHAR(13)+CHAR(10)+
     'EXEC master.dbo.sp_addlinkedsrvlogin @rmtsrvname=N'+CHAR(39)+serv.name+CHAR(39)+
 	', @useself=N'+CHAR(39)+case when ls_logins.uses_self_credential=1 then 'True' else 'False' END +CHAR(39)+	
-	', @locallogin=N'+CHAR(39)+COALESCE(prin.name,'',prin.name)+CHAR(39)
-    --serv.NAME,
-    --serv.product,
-    --serv.provider,
-    --serv.data_source,
-    --serv.catalog,
-    --prin.name,
-    --ls_logins.uses_self_credential,
-    --ls_logins.remote_name
+	', @locallogin=N'+CHAR(39)+COALESCE(prin.name,'',prin.name)+CHAR(39)+
+    case when ls_logins.uses_self_credential=0 then ', @rmtuser=N'+char(39)+ coalesce(ls_logins.remote_name,'',ls_logins.remote_name)+char(39)+ ', @rmtpassword='+ char(39) + '########' + char(39) else '' end
 FROM
     sys.servers AS serv
     LEFT JOIN sys.linked_logins AS ls_logins
@@ -84,11 +77,19 @@ WHERE serv.name<>@@SERVERNAME
 
 "
 
+# Create Output Folder
 $fullfolderPath = "$BaseFolder\$sqlinstance\02 - Linked Servers"
 if(!(test-path -path $fullfolderPath))
 {
     mkdir $fullfolderPath | Out-Null
 }
+
+# Delete pre-existing negative file
+if(test-path -path "$BaseFolder\$SQLInstance\02 - No Linked Servers Found.txt")
+{
+    Remove-Item "$BaseFolder\$SQLInstance\02 - No Linked Servers Found.txt"
+}
+
 	
 # Test for Username/Password needed to connect - else assume WinAuth passthrough
 if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
