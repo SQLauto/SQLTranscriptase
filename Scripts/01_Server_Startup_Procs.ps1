@@ -40,6 +40,13 @@ Param(
 
 Write-Host  -f Yellow -b Black "01 - Server Startup Stored Procedures"
 
+# assume localhost
+if ($SQLInstance.length -eq 0)
+{
+	Write-Host "Assuming localhost"
+	$Sqlinstance = 'localhost'
+}
+
 
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
@@ -141,8 +148,6 @@ else
 }
 
 $db 	= New-Object ("Microsoft.SqlServer.Management.SMO.Database")
-$tbl	= New-Object ("Microsoft.SqlServer.Management.SMO.Table")
-
 
 # Set scripter options to ensure only data is scripted
 $scripter.Options.ScriptSchema 	= $true;
@@ -199,18 +204,20 @@ $scripter.Options.XmlIndexes            = $true
 
 Write-Host "Starting Export..."
 
+# Master DB Only
 $sqlDatabase = $srv.Databases['Master']
 
-    # Script out objects for each DB
-    $db = $sqlDatabase
-    $fixedDBName = $db.name.replace('[','')
-    $fixedDBName = $fixedDBName.replace(']','')
-    $output_path = "$BaseFolder\$SQLInstance\01 - Server Startup Procs\"
+# Script out objects for each DB
+$db = $sqlDatabase
+$fixedDBName = $db.name.replace('[','')
+$fixedDBName = $fixedDBName.replace(']','')
+$output_path = "$BaseFolder\$SQLInstance\01 - Server Startup Procs\"
 
-    # Stored Procs
-    Write-Host "$fixedDBName - Stored Procs"
-    $storedProcs = $db.StoredProcedures | Where-object  {-not $_.IsSystemObject  }
-    CopyObjectsToFiles $storedProcs $output_path
+# Get list of User SPs in Master
+Write-Host "$fixedDBName - Stored Procs"
+
+$storedProcs = $db.StoredProcedures | Where-object  {-not $_.IsSystemObject  }
+CopyObjectsToFiles $storedProcs $output_path
 
 # finish
 set-location $BaseFolder
