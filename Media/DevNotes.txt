@@ -1,6 +1,6 @@
 George Walkey
 Richmond, VA
-May 5, 2015
+May 12, 2015
 george@insyncva.com
 
 First Debuted at SQL Saturday 381 in Richmond VA on March 21, 2015
@@ -34,6 +34,7 @@ Technology Used/Learned
 	Always a yummy snack
 	
  5) Must enable remote registry and firewall ports for WMI to work 
+
  6) Domain Admin account	
     Kidding
 	But you need at least rights on the boxes you are exporting information from
@@ -121,10 +122,7 @@ THE SCRIPTS
 	
  02 - Linked_Servers
 	No, I cant dump the passwords, wouldnt be very secure if I could, eh?
-	TSQL
-	sys.servers
-	sys.linked_logins
-	sys.server_principals
+	May 12, 2015 - Switched to SMO to grab usernames and all the other LS settings
 	
  03 - NET_Assemblies
 	TSQL
@@ -184,7 +182,8 @@ THE SCRIPTS
 	[SSISDB].[catalog].[folders]
 	bcp "exec [ssisdb].[catalog].[get_project] '$foldername','$prjname'"
 	Encryption Key: backup master keys to files is done with hard-wired password in the script you *should* change
-
+	April 22, 2015 - Created Output Folders to mirror the SSIS Folder structure
+	
  10 - SSAS_Databases
 	This works on both traditional MD Cube/Fact/Dimension Databases and the newer power-pivot-like Tabular Databases
 	Works on named instances, eg I have my Tabular instances called SERVER01/TAB to differentiate them from MD/Cube Databases
@@ -208,7 +207,7 @@ THE SCRIPTS
 	Timed Subscriptions: Web Service at http://$SQLInstance/ReportServer/ReportService2010.asmx
 	The reason this script may only dump out the RDL is because the RDL is stored in the ReportServer Database,
 	but the SSRS/Web service may be turned off
-	Added Folder/REport Security - March 31, 2015
+	Added Folder/Report Security Permissions Export- March 31, 2015
 	 
   12 - Security Audits
 	Originally only looking for Login to DB User mappings,
@@ -221,8 +220,8 @@ THE SCRIPTS
 	
 	
   13 - PKI
-	Certs are first saved to the server's default backup folder, 
-	whether local or UNC, then to your run folder, so the SHELL will need rights to that host backup folder
+	Minty Certs are first saved to the server's default backup folder, 
+	whether local or UNC, then to your run folder, so the SHELL will need rights to that host's backup folder
 	NOTE: All the exported PKI keys have hard-coded passwords in the save and restore scripts that you *should* change
 	TSQL
 	SMK: backup service master key
