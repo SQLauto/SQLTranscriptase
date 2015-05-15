@@ -123,8 +123,16 @@ function CopyObjectsToFiles($objects, $outDir) {
 			}
 		
 			$fixedOName = $o.name.replace('\','_')			
-			$scripter.Options.FileName = $outDir + $schemaPrefix + $fixedOName + ".sql"			
-			$scripter.EnumScript($o)
+			$scripter.Options.FileName = $outDir + $schemaPrefix + $fixedOName + ".sql"
+            try
+            {
+			    $scripter.EnumScript($o)
+            }
+            catch
+            {
+                $msg = "Cannot access object:"+$o
+                Write-Output $msg
+            }
 		}
 	}
 }
