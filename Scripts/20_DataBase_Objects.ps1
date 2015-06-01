@@ -130,8 +130,8 @@ function CopyObjectsToFiles($objects, $outDir) {
             }
             catch
             {
-                $msg = "Cannot access object:"+$o
-                Write-Output $msg
+                $msg = "Cannot script this element:"+$o
+                Write-output $msg
             }
 		}
 	}
@@ -225,6 +225,9 @@ foreach($sqlDatabase in $srv.databases)
 
     # Skip System Databases
     if ($sqlDatabase.Name -in 'Master','Model','MSDB','TempDB','SSISDB') {continue}
+
+    # Skip Offline Databases (SMO still enumerates them, but cant retrieve the objects)
+    if ($sqlDatabase.Status -ne 'Normal') {continue}
 
     # Script out objects for each DB
     $db = $sqlDatabase
