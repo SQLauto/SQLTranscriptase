@@ -209,7 +209,7 @@ THE SCRIPTS
 	but the SSRS/Web service may be turned off
 	Added Folder/Report Security Permissions Export- March 31, 2015
 	 
-  12 - Security Audits
+ 12 - Security Audits
 	Originally only looking for Login to DB User mappings,
 	Now we export 
 	1) Logins
@@ -219,7 +219,7 @@ THE SCRIPTS
 	5) Object Permissions
 	
 	
-  13 - PKI
+ 13 - PKI
 	Minty Certs are first saved to the server's default backup folder, 
 	whether local or UNC, then to your run folder, so the SHELL will need rights to that host's backup folder
 	NOTE: All the exported PKI keys have hard-coded passwords in the save and restore scripts that you *should* change
@@ -272,6 +272,7 @@ THE SCRIPTS
 	Synonyms
 	Settings include all 2014+ features such as Delayed Durability
 	Anything else not here is in the SMO DB object model, so grab a spoon
+	June 1, 2015 - Skip scripting-out of offline Databases
 
 --- Rants
 Microsoft's inconsistency in enabling and deployment of WMI/CIM/Powershell across the various versions of Windows aint cool
@@ -283,7 +284,7 @@ The default ports for CIM are not any better at 5985 (the WinRM port for HTTP) a
 CIM seems ALOT slower than WMI, for now.
 But SMO is slower than Santa Claus on December 26
 SMO uses all your RAM
-SMO API docs are lacking  Powershell examples, typically having only C#/VB listings
+SMO API docs are lacking decent Powershell examples, typically having only C#/VB equivalents
 
 --- Changelog
-	On GitHub
+	Lives On the Hub of Git
