@@ -1,4 +1,5 @@
-# SQLTranscriptase - SQL Server Documentation in Powershell
+# SQLTranscriptase 
+SQL Server Documentation in Powershell
 
 More Details are found in the Devnotes.txt in the Media folder
 
