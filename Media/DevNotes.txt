@@ -279,7 +279,7 @@ Microsoft's inconsistency in enabling and deployment of WMI/CIM/Powershell acros
 WMI/Remoting/WS-Man is enabled by default on Win Server version 2012 R2 for the Administrator account ONLY, not even the Administrators group.
 Firewalls block WMI (which talks on port 135, alongside MSDTC, RPC, endpoint manager, pre-CIFS file sharing)
 That means you usually cant hit DMZ servers with WMI
-The default ports for CIM are not any better at 5985 (the WinRM port for HTTP) and 5986 (the WinRM port for HTTPS), which may also be blocked.
+The default ports for CIM arent any better at 5985 (the WinRM port for HTTP) and 5986 (the WinRM port for HTTPS), which may also be blocked.
 
 CIM seems ALOT slower than WMI, for now.
 But SMO is slower than Santa Claus on December 26

@@ -51,6 +51,13 @@ Param(
 
 Write-Host  -f Yellow -b Black "20 - DataBase Objects (Triggers, Tables, Views, Procs, UDFs, FullTextCats, TableTypes, Schemas)"
 
+# assume localhost
+if ($SQLInstance.length -eq 0)
+{
+	Write-Output "Assuming localhost"
+	$Sqlinstance = 'localhost'
+}
+
 
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
@@ -61,21 +68,21 @@ if ($SQLInstance.Length -eq 0)
 
 
 # Working
-Write-host "Server $SQLInstance"
+Write-Output "Server $SQLInstance"
 
 
 # Server connection check
 $serverauth = "win"
 if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
 {
-	Write-host "Testing SQL Auth"
+	Write-Output "Testing SQL Auth"
 	try
     {
         $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
         if($results -ne $null)
         {
             $myver = $results.Column1
-            Write-Host $myver
+            Write-Output $myver
             $serverauth="sql"
         }	
 	}
@@ -88,13 +95,13 @@ if ($mypass.Length -ge 1 -and $myuser.Length -ge 1)
 }
 else
 {
-	Write-host "Testing Windows Auth"
+	Write-Output "Testing Windows Auth"
  	Try{
     $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -QueryTimeout 10 -erroraction SilentlyContinue
     if($results -ne $null)
     {
         $myver = $results.Column1
-        #Write-Host $myver
+        #Write-Output $myver
     }
 	}
 	catch
@@ -161,7 +168,6 @@ else
 
 $db 	= New-Object ("Microsoft.SqlServer.Management.SMO.Database")
 $tbl	= New-Object ("Microsoft.SqlServer.Management.SMO.Table")
-
 
 # Set scripter options to ensure only data is scripted
 $scripter.Options.ScriptSchema 	= $true;
@@ -236,6 +242,7 @@ foreach($sqlDatabase in $srv.databases)
     $output_path = "$BaseFolder\$SQLInstance\20 - DataBase Objects\$fixedDBname"
 
     # paths
+    $DB_Path            = "$output_path\"
     $table_path 		= "$output_path\Tables\"
     $TableTriggers_path	= "$output_path\TableTriggers\"
     $views_path 		= "$output_path\Views\"
@@ -257,11 +264,11 @@ foreach($sqlDatabase in $srv.databases)
     # 3) Set variables to null
     # 4) Let GC (hopefully) do its nefarious job of cleanup 
     # 5) Does it work?  Testing a batch file running against 22 SQL servers still uses about 16Gigs 'O Ram, even though the ps1 files are called in a chain,
-    #    giving GC a chance to release memory between powershell.exe sessions, but doesnt.
+    #    giving GC a chance to release memory between powershell.exe sessions, but it doesnt.
     #    Swell.
 
     <#
-    Write-Host "Starting Memory: $db"
+    Write-Output "Starting Memory: $db"
     [System.gc]::gettotalmemory("forcefullcollection") /1MB
 
     ps powershell* | Select *memory* | ft -auto `
@@ -277,6 +284,11 @@ foreach($sqlDatabase in $srv.databases)
     {
         mkdir $DBSettingsPath | Out-Null	
     }
+
+    # Main Database  Itsef with Files and FileGroups
+    Write-Output "$fixedDBName - Database"
+    $MainDB = $db  | Where-object  { -not $_.IsSystemObject  }
+    CopyObjectsToFiles $MainDB $DB_Path
 
     # Create some CSS for help in column formatting
     $myCSS = 
@@ -314,7 +326,7 @@ foreach($sqlDatabase in $srv.databases)
     $myCSS | out-file "$DBSettingsPath\HTMLReport.css" -Encoding ascii
    
     # Export DB Settings
-    Write-Host "$fixedDBName - Settings"
+    Write-Output "$fixedDBName - Settings"
     <#
     New-Item "$DBSettingsPath\Database_Settings.txt" -type file -force  |Out-Null
     [int]$i = 0
@@ -333,69 +345,68 @@ foreach($sqlDatabase in $srv.databases)
     $mySettings = $db.Properties
     $mySettings | sort-object Name | select Name, Value | ConvertTo-Html  -CSSUri "$DBSettingsPath\HTMLReport.css"| Set-Content "$DBSettingsPath\HtmlReport.html"
     
-
     # Tables
-    Write-Host "$fixedDBName - Tables"
+    Write-Output "$fixedDBName - Tables"
     $tbl = $db.Tables  | Where-object  { -not $_.IsSystemObject  }
     CopyObjectsToFiles $tbl $table_path
 
 
     # Stored Procs
-    Write-Host "$fixedDBName - Stored Procs"
+    Write-Output "$fixedDBName - Stored Procs"
     $storedProcs = $db.StoredProcedures | Where-object  {-not $_.IsSystemObject  }
     CopyObjectsToFiles $storedProcs $storedProcs_path
 
 
     # Views
-    Write-Host "$fixedDBName - Views"
+    Write-Output "$fixedDBName - Views"
     $views = $db.Views | Where-object { -not $_.IsSystemObject   } 
     CopyObjectsToFiles $views $views_path
 
 
     # UDFs
-    Write-Host "$fixedDBName - UDFs"
+    Write-Output "$fixedDBName - UDFs"
     $udfs = $db.UserDefinedFunctions | Where-object  { -not $_.IsSystemObject  }
     CopyObjectsToFiles $udfs $udfs_path
 
 
     # Table Types
-    Write-Host "$fixedDBName - Table Types"
+    Write-Output "$fixedDBName - Table Types"
     $udtts = $db.UserDefinedTableTypes  
     CopyObjectsToFiles $udtts $udtts_path
 
 
     # FullTextCats
-    Write-Host "$fixedDBName - FullTextCatalogs"
+    Write-Output "$fixedDBName - FullTextCatalogs"
     $catalog = $db.FullTextCatalogs
     CopyObjectsToFiles $catalog $textCatalog_path
 
 
     # DB Triggers
-    Write-Host "$fixedDBName - Database Triggers"
+    Write-Output "$fixedDBName - Database Triggers"
     $DBTriggers	= $db.Triggers
     CopyObjectsToFiles $DBTriggers $DBTriggers_path
 
 
     # Table Triggers
-    Write-Host "$fixedDBName - Table Triggers"
+    Write-Output "$fixedDBName - Table Triggers"
     $TableTriggers = $db.Tables.Triggers
     CopyObjectsToFiles $TableTriggers $TableTriggers_path
 
 
     # Schemas
-    Write-Host "$fixedDBName - Schemas"
+    Write-Output "$fixedDBName - Schemas"
     $Schemas = $db.Schemas | Where-object  { -not $_.IsSystemObject  }
     CopyObjectsToFiles $Schemas $Schemas_path
 
 
     # Sequences
-    Write-Host "$fixedDBName - Sequences"
+    Write-Output "$fixedDBName - Sequences"
     $Sequences = $db.Sequences
     CopyObjectsToFiles $Sequences $Sequences_path
 
 
     # Synonyms
-    Write-Host "$fixedDBName - Synonyms"
+    Write-Output "$fixedDBName - Synonyms"
     $Synonyms = $db.Synonyms
     CopyObjectsToFiles $Synonyms $Synonyms_path
 
@@ -432,7 +443,7 @@ foreach($sqlDatabase in $srv.databases)
     
 
     # List Filegroups, Files and Path
-    Write-Host "$fixedDBName - FileGroups"
+    Write-Output "$fixedDBName - FileGroups"
 
     # Create output folder
     $myoutputfile = $Filegroups_path+"Filegroups.txt"
@@ -484,7 +495,7 @@ foreach($sqlDatabase in $srv.databases)
     [System.GC]::Collect()
 
     <#
-    Write-Host "Ending Memory: $db"
+    Write-Output "Ending Memory: $db"
     [System.gc]::gettotalmemory("forcefullcollection") /1MB
 
     ps powershell* | Select *memory* | ft -auto `
