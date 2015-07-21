@@ -40,12 +40,18 @@ Import-Module "sqlps" -DisableNameChecking -erroraction SilentlyContinue
 #  Script Name
 Write-Host  -f Yellow -b Black "01 - Server Logins"
 
+# assume localhost
+if ($SQLInstance.length -eq 0)
+{
+	Write-Output "Assuming localhost"
+	$Sqlinstance = 'localhost'
+}
 
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
 {
     Write-host -f yellow "Usage: ./01_Server_Logins.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
-       Set-Location $BaseFolder
+    Set-Location $BaseFolder
     exit
 }
 
@@ -56,14 +62,14 @@ Write-host "Server $SQLInstance"
 $serverauth = "win"
 if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
 {
-	Write-host "Testing SQL Auth"
+	Write-Output "Testing SQL Auth"
 	try
     {
         $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
         if($results -ne $null)
         {
             $myver = $results.Column1
-            Write-Host $myver
+            Write-Output $myver
             $serverauth="sql"
         }	
 	}
@@ -76,14 +82,14 @@ if ($mypass.Length -ge 1 -and $myuser.Length -ge 1)
 }
 else
 {
-	Write-host "Testing Windows Auth"
+	Write-Output "Testing Windows Auth"
  	Try
     {
         $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -QueryTimeout 10 -erroraction SilentlyContinue
         if($results -ne $null)
         {
             $myver = $results.Column1
-            Write-Host $myver
+            Write-Output $myver
         }
 	}
 	catch
@@ -211,5 +217,5 @@ $logins_path  = "$BaseFolder\$SQLInstance\01 - Server Logins\"
 $logins = $srv.Logins
 CopyObjectsToFiles $logins $logins_path
  
-
+# Return to Base
 set-location $BaseFolder

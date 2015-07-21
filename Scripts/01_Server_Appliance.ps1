@@ -53,7 +53,7 @@ Write-Host -f Yellow -b Black "01 - Server Appliance"
 # assume localhost
 if ($SQLInstance.length -eq 0)
 {
-	Write-Host "Assuming localhost"
+	Write-Output "Assuming localhost"
 	$Sqlinstance = 'localhost'
 }
 
@@ -61,27 +61,27 @@ if ($SQLInstance.length -eq 0)
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
 {
-    Write-host -f yellow "Usage: ./01_Server_Appliance.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
+    Write-Host -f yellow "Usage: ./01_Server_Appliance.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
     Set-Location $BaseFolder
     exit
 }
 
 # Working
-Write-host "Server $SQLInstance"
+Write-Output "Server $SQLInstance"
 
 
 # Server connection check
 [string]$serverauth = "win"
 if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
 {
-	Write-host "Testing SQL Auth"
+	Write-Output "Testing SQL Auth"
 	try
     {
         $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
         if($results -ne $null)
         {
             $myver = $results.Column1
-            Write-Host $myver
+            Write-Output $myver
             $serverauth="sql"
         }	
 	}
@@ -94,14 +94,14 @@ if ($mypass.Length -ge 1 -and $myuser.Length -ge 1)
 }
 else
 {
-	Write-host "Testing Windows Auth"
+	Write-Output "Testing Windows Auth"
  	Try
     {
         $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -QueryTimeout 10 -erroraction SilentlyContinue
         if($results -ne $null)
         {
             $myver = $results.Column1
-            Write-Host $myver
+            Write-Output $myver
         }
 	}
 	catch
@@ -120,18 +120,16 @@ if(!(test-path -path $fullfolderPath))
 }
 
 
-# Load SQL SMO Assembly  - let me count the ways
-# Original PShell 1/2 method 
+# Load SQL SMO Assemblies  - let me count the ways
+# Original PShell 1/2 method is LoadWithPartialName
 # Works fine in PS 3/4
 [System.Reflection.Assembly]::LoadWithPartialName("Microsoft.SqlServer.SMO") | out-null
 
-# Throws error looking for version 9.0 (2005), unless 2005 is loaded, then this works fine
-# Something to do with how the various libs register the verisons in the Registry?
-# Yet there are 3! Ways to do this, while LoadwithPartial only has one syntax (and it works)
+# Throws error looking for version 9.0 (2005), unless 2005 is loaded, then it works fine
+# Something to do with how the various libs register the verisons in the Registry
+# Yet there are 3 Ways to do this, while LoadwithPartial only has one syntax (and it seems to work everywhere)
 
-#Add-Type -AssemblyName “Microsoft.SqlServer.Smo” 
-
-# 
+#Add-Type -AssemblyName “Microsoft.SqlServer.Smo”
 #Add-Type –AssemblyName “Microsoft.SqlServer.Smo, Version=12.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91”
 #Add-Type –AssemblyName “Microsoft.SqlServer.SmoExtended, Version=12.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91”
 
@@ -147,6 +145,7 @@ if(!(test-path -path $fullfolderPath))
 # Set Local Vars
 [string]$server = $SQLInstance
 
+# Create SMO Server Object
 if ($serverauth -eq "win")
 {
     $srv = New-Object "Microsoft.SqlServer.Management.SMO.Server" $server
@@ -160,7 +159,7 @@ else
 }
 
 
-# Dump info to output file
+# Create output text file and add first line
 New-Item "$fullfolderPath\Server_Appliance.txt" -type file -force  |Out-Null
 Add-Content -Value "Server Hardware and Software Capabilities for $SQLInstance `r`n" -Path "$fullfolderPath\Server_Appliance.txt" -Encoding Ascii
 
@@ -218,7 +217,9 @@ $mystring| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Appe
 $mystring =  "Is HADR: " +$srv.IsHadrEnabled
 $mystring| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
 
+# Insert CR/LF shortcuts
 $mystring =  "`r`nSQL Builds for reference: http://sqlserverbuilds.blogspot.com/ "
 $mystring| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
 
+# Return To Base
 set-location $BaseFolder

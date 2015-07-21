@@ -39,12 +39,17 @@ Param(
   [string]$mypass
 )
 
-
 [string]$BaseFolder = (Get-Item -Path ".\" -Verbose).FullName
-
 
 #  Script Name
 Write-Host  -f Yellow -b Black "10 - SSAS Databases"
+
+# assume localhost
+if ($SQLInstance.length -eq 0)
+{
+	Write-Output "Assuming localhost"
+	$Sqlinstance = 'localhost'
+}
 
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
@@ -56,7 +61,7 @@ if ($SQLInstance.Length -eq 0)
 
 
 # Working
-Write-host "Server $SQLInstance"
+Write-Output "Server $SQLInstance"
 
 
 # load the AMO and XML assemblies into the current session
@@ -95,10 +100,11 @@ try
 }
 catch
 {
-    write-host "SSAS NOT running or cant connect on $SQLInstance"
+    Write-Output "SSAS NOT running or cant connect on $SQLInstance"
     echo null > "$BaseFolder\$SQLInstance\10 - SSAS NOT running or cant connect.txt"
     exit
 }
 
+# Return to Base
 set-location $BaseFolder
 

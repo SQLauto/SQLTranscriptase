@@ -46,6 +46,13 @@ Param(
 
 Write-Host  -f Yellow -b Black "14 - Service Broker"
 
+# assume localhost
+if ($SQLInstance.length -eq 0)
+{
+	Write-Output "Assuming localhost"
+	$Sqlinstance = 'localhost'
+}
+
 
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
@@ -57,21 +64,21 @@ if ($SQLInstance.Length -eq 0)
 
 
 # Working
-Write-host "Server $SQLInstance"
+Write-Output "Server $SQLInstance"
 
 
-# Server connection check
+# Server Connection check
 $serverauth = "win"
 if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
 {
-	Write-host "Testing SQL Auth"
+	Write-Output "Testing SQL Auth"
 	try
     {
         $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
         if($results -ne $null)
         {
             $myver = $results.Column1
-            Write-Host $myver
+            Write-Output $myver
             $serverauth="sql"
         }	
 	}
@@ -84,14 +91,14 @@ if ($mypass.Length -ge 1 -and $myuser.Length -ge 1)
 }
 else
 {
-	Write-host "Testing Windows Auth"
+	Write-Output "Testing Windows Auth"
  	Try
     {
         $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -QueryTimeout 10 -erroraction SilentlyContinue
         if($results -ne $null)
         {
             $myver = $results.Column1
-            Write-Host $myver
+            Write-Output $myver
         }
 	}
 	catch
@@ -132,7 +139,7 @@ function CopyObjectsToFiles($objects, $outDir) {
 [System.Reflection.Assembly]::LoadWithPartialName('Microsoft.SqlServer.SMOExtended') | out-null
 
 # Set Local Vars
-$server 	= $SQLInstance
+$server = $SQLInstance
 
 if ($serverauth -eq "win")
 {
@@ -328,7 +335,7 @@ foreach($sqlDatabase in $srv.databases)
 
 if ($anyfound-eq $true)
 {
-    Write-Host "Broker Objects written for $fixedDBName"
+    Write-Output "Broker Objects written for $fixedDBName"
 }
 
 
@@ -337,6 +344,6 @@ if ($anyfound-eq $true)
 
 
 
-# finish
+# Return to Base
 set-location $BaseFolder
 

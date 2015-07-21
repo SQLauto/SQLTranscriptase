@@ -48,6 +48,13 @@ Param(
 
 Write-Host  -f Yellow -b Black "13 - PKI (Master keys, Asym Keys, Sym Keys, Certificates)"
 
+# assume localhost
+if ($SQLInstance.length -eq 0)
+{
+	Write-Output "Assuming localhost"
+	$Sqlinstance = 'localhost'
+}
+
 
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
@@ -59,7 +66,7 @@ if ($SQLInstance.Length -eq 0)
 
 
 # Working
-Write-host "Server $SQLInstance"
+Write-Output "Server $SQLInstance"
 
 
 import-module "sqlps" -DisableNameChecking -erroraction SilentlyContinue
@@ -68,14 +75,14 @@ import-module "sqlps" -DisableNameChecking -erroraction SilentlyContinue
 $serverauth = "win"
 if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
 {
-	Write-host "Testing SQL Auth"
+	Write-Output "Testing SQL Auth"
 	try
     {
         $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
         if($results -ne $null)
         {
             $myver = $results.Column1
-            Write-Host $myver
+            Write-Output $myver
             $serverauth="sql"
         }	
 	}
@@ -88,14 +95,14 @@ if ($mypass.Length -ge 1 -and $myuser.Length -ge 1)
 }
 else
 {
-	Write-host "Testing Windows Auth"
+	Write-Output "Testing Windows Auth"
  	Try
     {
         $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -QueryTimeout 10 -erroraction SilentlyContinue
         if($results -ne $null)
         {
             $myver = $results.Column1
-            Write-Host $myver
+            Write-Output $myver
         }
 	}
 	catch
@@ -141,12 +148,12 @@ if(!(test-path -path $PKI_path))
     mkdir $PKI_path | Out-Null	
 }
 
-Write-Host "Backup folder is $backupfolder"
+Write-Output "Backup folder is $backupfolder"
 
 # -------------------------------------
 # 1) Service Master Key - Server Level
 # -------------------------------------
-Write-host "Saving Service Master Key..."
+Write-Output "Saving Service Master Key..."
 
 $mySQLquery = "
 backup service master key to file = N'$backupfolder\Service_Master_Key.txt'
@@ -185,7 +192,7 @@ if ($unc -eq 1)
     $src = "$sourcefolder\Service_Master_Key.txt"
     if (!(test-path $src))
     {
-        Write-Host "Cant connect to $src"
+        Write-Output "Cant connect to $src"
     }
     else
     {
@@ -212,7 +219,7 @@ else
 
     if (!(test-path $src))
     {
-        Write-Host "Cant connect to $src"
+        Write-Output "Cant connect to $src"
     }
     else
     {
@@ -229,7 +236,7 @@ else
 # 2) Database Master Keys - DB Level
 # ------------------------------------
 set-location $BaseFolder
-Write-host "Saving Database Master Keys:"
+Write-Output "Saving Database Master Keys:"
 
 foreach($sqlDatabase in $srv.databases) 
 {
@@ -268,7 +275,7 @@ foreach($sqlDatabase in $srv.databases)
     if ($sqlresults2.Column1 -eq 0) {continue}
 
     # Tell User
-    Write-Host "Exporting DB Master for $fixedDBName"
+    Write-Output "Exporting DB Master for $fixedDBName"
     
 
     #Create output folder
@@ -313,8 +320,8 @@ foreach($sqlDatabase in $srv.databases)
         }   
         else
         {
-            Write-Host "Cant find exported DB Master key for $fixedDBName in $sourcefolder"
-            Write-Host "Encrypted by Password instead of Service Master Key?"
+            Write-Output "Cant find exported DB Master key for $fixedDBName in $sourcefolder"
+            Write-Output "Encrypted by Password instead of Service Master Key?"
             echo null > "$output_path\Cant find exported DB Master key.txt"
         }
    	}
@@ -342,8 +349,8 @@ foreach($sqlDatabase in $srv.databases)
         }   
         else
         {
-            Write-Host "Cant find exported DB Master key for $fixedDBName in $sourcefolder"
-            Write-Host "Encrypted by Password instead of Service Master Key?"
+            Write-Output "Cant find exported DB Master key for $fixedDBName in $sourcefolder"
+            Write-Output "Encrypted by Password instead of Service Master Key?"
             echo null > "$output_path\Cant find exported DB Master key.txt"
         }
    	}
@@ -355,7 +362,7 @@ foreach($sqlDatabase in $srv.databases)
 # -------------------------------
 # 3) Certificates from Master DB
 # -------------------------------
-Write-host "Saving Certs:"
+Write-Output "Saving Certs:"
 
 # Check for Exisitng Certs
 $mySQLQuery = "
@@ -444,7 +451,7 @@ if ($sqlresults22.Column1 -eq 1)
         # Test-Path
         if (!(test-path $backupfolder))
         {
-            Write-Host "Cant connect to $backupfolder"
+            Write-Output "Cant connect to $backupfolder"
         }
         else
         {
@@ -482,8 +489,8 @@ if ($sqlresults22.Column1 -eq 1)
         }   
         else
         {
-            Write-Host "Cant find exported Certificates for $fixedDBName in $sourcefolder"
-            Write-Host "Encrypted by Password instead of Service Master Key?"
+            Write-Output "Cant find exported Certificates for $fixedDBName in $sourcefolder"
+            Write-Output "Encrypted by Password instead of Service Master Key?"
             echo null > "$output_path\Cant find exported Certs.txt"
         }
 
@@ -511,8 +518,8 @@ if ($sqlresults22.Column1 -eq 1)
         }   
         else
         {
-            Write-Host "Cant find exported Certificates for $fixedDBName in $sourcefolder"
-            Write-Host "Encrypted by Password instead of Service Master Key?"
+            Write-Output "Cant find exported Certificates for $fixedDBName in $sourcefolder"
+            Write-Output "Encrypted by Password instead of Service Master Key?"
             echo null > "$output_path\Cant find exported Certs.txt"
         }
        
@@ -520,7 +527,6 @@ if ($sqlresults22.Column1 -eq 1)
 
 # If any Certs Found
 } 
-
 
 set-location $BaseFolder
 

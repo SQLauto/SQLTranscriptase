@@ -39,6 +39,14 @@ Param(
 #  Script Name
 Write-Host  -f Yellow -b Black "04 - Agent Jobs"
 
+# assume localhost
+if ($SQLInstance.length -eq 0)
+{
+	Write-Output "Assuming localhost"
+	$Sqlinstance = 'localhost'
+}
+
+
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
 {
@@ -49,7 +57,7 @@ if ($SQLInstance.Length -eq 0)
 
 
 # Working
-Write-host "Server $SQLInstance"
+Write-Output "Server $SQLInstance"
 
 
 # SMO Connection
@@ -62,11 +70,11 @@ if ($mypass.Length -ge 1 -and $myuser.Length -ge 1)
 	$server.ConnectionContext.LoginSecure = $false 
 	$server.ConnectionContext.Login=$myuser
 	$server.ConnectionContext.Password=$mypass
-	Write-Host "Using SQL Auth"
+	Write-Output "Using SQL Auth"
 }
 else
 {
-	Write-Host "Using Windows Auth"
+	Write-Output "Using Windows Auth"
 }
 
 $jobs = $server.JobServer.Jobs 
@@ -93,15 +101,16 @@ if ($jobs -ne $null)
         $FileName = "$fullfolderPath\$myjobname.sql"
         $job.Script() | Out-File -filepath $FileName
     }
-    Write-Host "Exported" $Jobs.Count  "Jobs"
+
+    Write-Host "Exported" $Jobs.Count "Jobs"
 }
 else
 {
-    write-host "No Agent Jobs Found on $SQLInstance"        
+    Write-Output "No Agent Jobs Found on $SQLInstance"        
     echo null > "$BaseFolder\$SQLInstance\04 - No Agent Jobs Found.txt"
     Set-Location $BaseFolder
     exit
 }
 
-
+# Return To Base
 Set-Location $BaseFolder

@@ -43,7 +43,7 @@ Write-Host  -f Yellow -b Black "01 - Server Startup Stored Procedures"
 # assume localhost
 if ($SQLInstance.length -eq 0)
 {
-	Write-Host "Assuming localhost"
+	Write-Output "Assuming localhost"
 	$Sqlinstance = 'localhost'
 }
 
@@ -57,21 +57,21 @@ if ($SQLInstance.Length -eq 0)
 
 
 # Working
-Write-host "Server $SQLInstance"
+Write-Output "Server $SQLInstance"
 
 
 # Server connection check
 $serverauth = "win"
 if ($mypass.Length -ge 1 -and $myuser.Length -ge 1)
 {
-	Write-host "Testing SQL Auth"
+	Write-Output "Testing SQL Auth"
 	try
     {
         $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
         if($results -ne $null)
         {
             $myver = $results.Column1
-            Write-Host $myver
+            Write-Output $myver
             $serverauth="sql"
         }	
 	}
@@ -84,7 +84,7 @@ if ($mypass.Length -ge 1 -and $myuser.Length -ge 1)
 }
 else
 {
-	Write-host "Testing Windows Auth"
+	Write-Output "Testing Windows Auth"
  	Try{
     $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -QueryTimeout 10 -erroraction SilentlyContinue
     if($results -ne $null)
@@ -202,7 +202,7 @@ $scripter.Options.ToFileOnly 			= $true
 $scripter.Options.WithDependencies		= $false
 $scripter.Options.XmlIndexes            = $true
 
-Write-Host "Starting Export..."
+Write-Output "Starting Export..."
 
 # Master DB Only
 $sqlDatabase = $srv.Databases['Master']
@@ -214,11 +214,11 @@ $fixedDBName = $fixedDBName.replace(']','')
 $output_path = "$BaseFolder\$SQLInstance\01 - Server Startup Procs\"
 
 # Get list of User SPs in Master
-Write-Host "$fixedDBName - Stored Procs"
+Write-Output "$fixedDBName - Stored Procs"
 
 $storedProcs = $db.StoredProcedures | Where-object  {-not $_.IsSystemObject  }
 CopyObjectsToFiles $storedProcs $output_path
 
-# finish
+# Return to Base
 set-location $BaseFolder
 

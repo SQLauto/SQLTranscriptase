@@ -3,7 +3,7 @@
     Gets the SQL Agent Database Mail Profiles
 	
 .DESCRIPTION
-    Writes the SQL Agent Database Mail Profiles out to DBMail_Accounts.sql
+    Writes the SQL Agent Database Mail Profiles out to DBMail_Profiles.sql
 	
 .EXAMPLE
     05_DBMail_Profiles.ps1 localhost
@@ -38,6 +38,14 @@ Param(
 #  Script Name
 Write-Host  -f Yellow -b Black "05 - DBMail Profiles"
 
+# assume localhost
+if ($SQLInstance.length -eq 0)
+{
+	Write-Output "Assuming localhost"
+	$Sqlinstance = 'localhost'
+}
+
+
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
 {
@@ -48,20 +56,20 @@ if ($SQLInstance.Length -eq 0)
 
 
 # Working
-Write-host "Server $SQLInstance"
+Write-Output "Server $SQLInstance"
 
 # Server connection check
 $serverauth = "win"
 if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
 {
-	Write-host "Testing SQL Auth"
+	Write-Output "Testing SQL Auth"
 	try
     {
         $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
         if($results -ne $null)
         {
             $myver = $results.Column1
-            Write-Host $myver
+            Write-Output $myver
             $serverauth="sql"
         }	
 	}
@@ -74,13 +82,13 @@ if ($mypass.Length -ge 1 -and $myuser.Length -ge 1)
 }
 else
 {
-	Write-host "Testing Windows Auth"
+	Write-Output "Testing Windows Auth"
  	Try{
     $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -QueryTimeout 10 -erroraction SilentlyContinue
     if($results -ne $null)
     {
         $myver = $results.Column1
-        Write-Host $myver
+        Write-Output $myver
     }
 	}
 	catch
@@ -103,8 +111,7 @@ $Server= $SQLInstance;
 #Get a server object which corresponds to the default instance 
 if ($serverauth -eq "win")
 {
-    $srv        = New-Object "Microsoft.SqlServer.Management.SMO.Server" $server
-    #$scripter 	= New-Object ("Microsoft.SqlServer.Management.SMO.Scripter") ($server)
+    $srv = New-Object "Microsoft.SqlServer.Management.SMO.Server" $server
 }
 else
 {
@@ -112,10 +119,7 @@ else
     $srv.ConnectionContext.LoginSecure=$false
     $srv.ConnectionContext.set_Login($myuser)
     $srv.ConnectionContext.set_Password($mypass)
-    #$scripter = New-Object ("Microsoft.SqlServer.Management.SMO.Scripter") ($srv)
 }
-
-#Script Database Mail configuration from the server 
 
 # Error trapping off for webserviceproxy calls
 $old_ErrorActionPreference = $ErrorActionPreference
@@ -144,12 +148,10 @@ if ($DBMailProfiles -ne $null)
 }
 else
 {
-    write-host "No Database Mail Profiles found on $SQLInstance"
+    Write-Output "No Database Mail Profiles found on $SQLInstance"
     echo null > "$BaseFolder\$SQLInstance\05 - No Database Mail Profiles found.txt"
     Set-Location $BaseFolder    
 }
 
+# Return to Base
 set-location $BaseFolder
-
-
-

@@ -41,31 +41,37 @@ Import-Module "sqlps" -DisableNameChecking -erroraction SilentlyContinue
 #  Script Name
 Write-Host  -f Yellow -b Black "01 - Server Resource Governor"
 
+# assume localhost
+if ($SQLInstance.length -eq 0)
+{
+	Write-Output "Assuming localhost"
+	$Sqlinstance = 'localhost'
+}
 
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
 {
     Write-host -f yellow "Usage: ./01_Server_Resource_Governor.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
-       Set-Location $BaseFolder
+    Set-Location $BaseFolder
     exit
 }
 
 # Working
-Write-host "Server $SQLInstance"
+Write-Output "Server $SQLInstance"
 
 
 # Server connection check
 $serverauth = "win"
 if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
 {
-	Write-host "Testing SQL Auth"
+	Write-Output "Testing SQL Auth"
 	try
     {
         $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
         if($results -ne $null)
         {
             $myver = $results.Column1
-            Write-Host $myver
+            Write-Output $myver
             $serverauth="sql"
         }	
 	}
@@ -78,14 +84,14 @@ if ($mypass.Length -ge 1 -and $myuser.Length -ge 1)
 }
 else
 {
-	Write-host "Testing Windows Auth"
+	Write-Output "Testing Windows Auth"
  	Try
     {
         $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -QueryTimeout 10 -erroraction SilentlyContinue
         if($results -ne $null)
         {
             $myver = $results.Column1
-            Write-Host $myver
+            Write-Output $myver
         }
 	}
 	catch
@@ -129,7 +135,7 @@ $server	= $SQLInstance
 
 if ($serverauth -eq "win")
 {
-    $srv    = New-Object "Microsoft.SqlServer.Management.SMO.Server" $server
+    $srv        = New-Object "Microsoft.SqlServer.Management.SMO.Server" $server
     $scripter 	= New-Object ("Microsoft.SqlServer.Management.SMO.Scripter") ($server)
 }
 else
@@ -206,7 +212,7 @@ if(!(test-path -path $output_path))
 $pools = $srv.ResourceGovernor.ResourcePools | where-object -FilterScript {$_.Name -notin "internal","default"}
 if ($pools.Count -gt 0)
 {
-       CopyObjectsToFiles $pools $output_path
+    CopyObjectsToFiles $pools $output_path
 }
 
 #Workgroups
@@ -229,4 +235,5 @@ foreach ($pool in $pools)
     
 } 
 
+# Return to Base
 set-location $BaseFolder

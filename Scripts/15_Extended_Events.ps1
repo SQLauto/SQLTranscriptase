@@ -52,7 +52,7 @@ Write-Host -f Yellow -b Black "15 - Extended Events"
 # assume localhost
 if ($SQLInstance.length -eq 0)
 {
-	Write-Host "Assuming localhost"
+	Write-Output "Assuming localhost"
 	$Sqlinstance = 'localhost'
 }
 
@@ -66,21 +66,21 @@ if ($SQLInstance.Length -eq 0)
 }
 
 # Working
-Write-host "Server $SQLInstance"
+Write-Output "Server $SQLInstance"
 
 
 # Server connection check
 [string]$serverauth = "win"
 if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
 {
-	Write-host "Testing SQL Auth"
+	Write-Output "Testing SQL Auth"
 	try
     {
         $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
         if($results -ne $null)
         {
             $myver = $results.Column1
-            Write-Host $myver
+            Write-Output $myver
             $serverauth="sql"
         }	
 	}
@@ -93,14 +93,14 @@ if ($mypass.Length -ge 1 -and $myuser.Length -ge 1)
 }
 else
 {
-	Write-host "Testing Windows Auth"
+	Write-Output "Testing Windows Auth"
  	Try
     {
         $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -QueryTimeout 10 -erroraction SilentlyContinue
         if($results -ne $null)
         {
             $myver = $results.Column1
-            Write-Host $myver
+            Write-Output $myver
         }
 	}
 	catch
@@ -113,7 +113,7 @@ else
 
 if (!($myver -like "11.0*") -and !($myver -like "12.0*"))
 {
-    Write-Host "Supports Extended Events only on SQL Server 2012 or higher"
+    Write-Output "Supports Extended Events only on SQL Server 2012 or higher"
     exit
 }
 
@@ -127,7 +127,7 @@ select [event_session_id],[name] from sys.server_event_sessions
 [string]$serverauth = "win"
 if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
 {
-	Write-host "Using Sql Auth"	
+	Write-Output "Using Sql Auth"	
 
     $old_ErrorActionPreference = $ErrorActionPreference
     $ErrorActionPreference = 'SilentlyContinue'
@@ -136,7 +136,7 @@ if ($mypass.Length -ge 1 -and $myuser.Length -ge 1)
 
     if ($EvtSessions -eq $null)
     {
-        write-host "No Extended Event Sessions found on $SQLInstance"        
+        Write-Output "No Extended Event Sessions found on $SQLInstance"        
         echo null > "$BaseFolder\$SQLInstance\15 - No Extended Event Sessions found.txt"
         Set-Location $BaseFolder
         exit
@@ -149,7 +149,7 @@ if ($mypass.Length -ge 1 -and $myuser.Length -ge 1)
 }
 else
 {
-	Write-host "Using Windows Auth"	
+	Write-Output "Using Windows Auth"	
 
     $old_ErrorActionPreference = $ErrorActionPreference
     $ErrorActionPreference = 'SilentlyContinue'
@@ -157,7 +157,7 @@ else
 	$EvtSessions = Invoke-SqlCmd -query $sqlES  -Server $SQLInstance  
     if ($EvtSessions -eq $null)
     {
-        write-host "No Extended Event Sessions found on $SQLInstance"        
+        Write-Output "No Extended Event Sessions found on $SQLInstance"        
         echo null > "$BaseFolder\$SQLInstance\15 - No Extended Event Sessions found.txt"
         Set-Location $BaseFolder
         exit
@@ -177,7 +177,7 @@ if(!(test-path -path $fullfolderPath))
 
 
 # *Must Credit*
-# Jonathan Kehayias for the following code, including the correct DLLs, order of things and the ConnectionStringBuilder
+# Jonathan Kehayias for the following code, including the correct DLLs, order of things and the need to use the ConnectionStringBuilder
 # https://www.sqlskills.com/blogs/jonathan/
 # http://sqlperformance.com/author/jonathansqlskills-com
 # 
@@ -201,16 +201,14 @@ else
     $conbuild.psbase.Password = $mypass
 }
 
-# Connect
+# Connect to server
 $sqlconn = New-Object System.Data.SqlClient.SqlConnection $conBuild.ConnectionString.ToString();
 
-# Server
+# Grab the SqlStoreConnection
 $Server = New-Object Microsoft.SqlServer.Management.Sdk.Sfc.SqlStoreConnection $sqlconn
 
-# XE Sessions
+# XE Sessions are stored in the XEStore Object
 $XEStore = New-Object Microsoft.SqlServer.Management.XEvent.XEStore $Server
-
-$ScrapSession = $XEStore.Sessions["system_health"];
 
 foreach($XESession in $XEStore.Sessions)
 {    

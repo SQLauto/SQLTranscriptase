@@ -41,17 +41,24 @@ Import-Module “sqlps” -DisableNameChecking -erroraction SilentlyContinue
 #  Script Name
 Write-Host  -f Yellow -b Black "04 - Agent Alerts"
 
+# assume localhost
+if ($SQLInstance.length -eq 0)
+{
+	Write-Output "Assuming localhost"
+	$Sqlinstance = 'localhost'
+}
+
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
 {
     Write-host -f yellow "Usage: ./04_Agent_Alerts.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
-       Set-Location $BaseFolder
+    Set-Location $BaseFolder
     exit
 }
 
 
 # Working
-Write-host "Server $SQLInstance"
+Write-Output "Server $SQLInstance"
 
 
 
@@ -78,7 +85,7 @@ if(!(test-path -path $fullfolderPath))
 # Test for Username/Password needed to connect - else assume WinAuth pass-through
 if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
 {
-	Write-host "Using SQL Auth"
+	Write-Output "Using SQL Auth"
 
     $old_ErrorActionPreference = $ErrorActionPreference
     $ErrorActionPreference = 'SilentlyContinue'
@@ -87,7 +94,7 @@ if ($mypass.Length -ge 1 -and $myuser.Length -ge 1)
 
     if ($results -eq $null)
     {
-        write-host "No Agent Alerts Found on $SQLInstance"        
+        Write-Output "No Agent Alerts Found on $SQLInstance"        
         echo null > "$BaseFolder\$SQLInstance\04 - No Agent Alerts Found.txt"
         Set-Location $BaseFolder
         exit
@@ -106,7 +113,7 @@ if ($mypass.Length -ge 1 -and $myuser.Length -ge 1)
 }
 else
 {
-	Write-host "Using Windows Auth"
+	Write-Output "Using Windows Auth"
 
     $old_ErrorActionPreference = $ErrorActionPreference
     $ErrorActionPreference = 'SilentlyContinue'
@@ -114,7 +121,7 @@ else
 	$results = Invoke-SqlCmd -query $sql  -Server $SQLInstance  
     if ($results -eq $null)
     {
-        write-host "No Agent Alerts Found on $SQLInstance"        
+        Write-Output "No Agent Alerts Found on $SQLInstance"        
         echo null > "$BaseFolder\$SQLInstance\04 - No Agent Alerts Found.txt"
         Set-Location $BaseFolder
         exit
@@ -130,8 +137,11 @@ else
     {
         $row.column1 | out-file "$fullfolderPath\Agent_Alerts.sql" -Encoding ascii -Append
     }
+
+    Write-Host "Exported" $results.Count "Alerts"
 }
 
+# Return to Base
 set-location $BaseFolder
 
 

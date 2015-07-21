@@ -45,6 +45,12 @@ Param(
 #  Script Name
 Write-Host  -f Yellow -b Black "11 - SSRS Objects"
 
+# assume localhost
+if ($SQLInstance.length -eq 0)
+{
+	Write-Output "Assuming localhost"
+	$Sqlinstance = 'localhost'
+}
 
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
@@ -56,7 +62,7 @@ if ($SQLInstance.Length -eq 0)
 
 
 # Working
-Write-host "Server $SQLInstance"
+Write-Output "Server $SQLInstance"
 
 
 # Preload SQL PS module
@@ -137,7 +143,7 @@ $toplevelfolders = @()
 
 if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
 {
-Write-host "Using SQL Auth"
+Write-Output "Using SQL Auth"
 
 	# First, see if the SSRS Database exists
 	$exists = $FALSE
@@ -161,7 +167,7 @@ Write-host "Using SQL Auth"
 
 	if ($exists -eq $FALSE)
     {
-        write-host "SSRS Database not found on $SQLInstance"
+        Write-Output "SSRS Database not found on $SQLInstance"
         echo null > "$BaseFolder\$SQLInstance\11 - SSRS Catalog - Not found or cant connect.txt"
         Set-Location $BaseFolder
         exit
@@ -173,7 +179,7 @@ Write-host "Using SQL Auth"
 }
 else
 {
-    Write-host "Using Windows Auth"
+    Write-Output "Using Windows Auth"
 
 	# See if the SSRS Database Exists
 	$exists = $FALSE
@@ -194,7 +200,7 @@ else
 	
 	if ($exists -eq $FALSE)
     {
-        write-host "SSRS Catalog not found on $SQLInstance"
+        Write-Output "SSRS Catalog not found on $SQLInstance"
         echo null > "$BaseFolder\$SQLInstance\11 - SSRS Catalog - Not found or cant connect.txt"
         set-location $BaseFolder
         exit
@@ -314,7 +320,7 @@ Foreach ($pkg in $Packages)
 # ------------------------
 # 2) SSRS Configuration
 # ------------------------
-Write-Host "Writing SSRS Settings to file..."
+Write-Output "Writing SSRS Settings to file..."
 $old_ErrorActionPreference = $ErrorActionPreference
 $ErrorActionPreference = 'SilentlyContinue'
 
@@ -325,7 +331,7 @@ try
     if ($?)
     {
         $wmi1 = 10
-        Write-Host "Found SSRS v10 (2008)"
+        Write-Output "Found SSRS v10 (2008)"
     }
     else
     {
@@ -346,7 +352,7 @@ if ($wmi1 -eq 0)
         if ($?)
         {
             $wmi1 = 11
-            Write-Host "Found SSRS v11 (2012)"
+            Write-Output "Found SSRS v11 (2012)"
         }
         else
         {
@@ -367,7 +373,7 @@ if ($wmi1 -eq 0)
         if ($?)
         {
             $wmi1 = 12
-            Write-Host "Found SSRS v12 (2014)"
+            Write-Output "Found SSRS v12 (2014)"
         }
         else
         {
@@ -388,7 +394,7 @@ $ErrorActionPreference = $old_ErrorActionPreference
 # -------------------------
 # https://msdn.microsoft.com/en-us/library/ms157273.aspx
 
-Write-host "Saving RSReportServer.config file..."
+Write-Output "Saving RSReportServer.config file..."
 
 # 2008
 $copysrc = "\\$sqlinstance\c$\Program Files\Microsoft SQL Server\MSRS10.MSSQLSERVER\Reporting Services\ReportServer\RSreportserver.config"
@@ -409,12 +415,12 @@ copy-item "\\$sqlinstance\c$\Program Files\Microsoft SQL Server\MSRS12.MSSQLSERV
 # -----------------------
 # 4) Database Encryption Key
 # -----------------------
-Write-Host "Backup SSRS Encryption Key..."
-Write-Host "WMI found SSRS version "$wmi1
+Write-Output "Backing up SSRS Encryption Key..."
+Write-Output "WMI found SSRS version "$wmi1
 
 if ($wmi1 -eq 10)
 {
-    Write-Host "SSRS 2008 - cant access Encryption key from WMI. Please use rskeymgmt.exe on server to export the key"
+    Write-Output "SSRS 2008 - cant access Encryption key from WMI. Please use rskeymgmt.exe on server to export the key"
     New-Item "$fullfolderPathKey\SSRS_Encryption_Key_not_exported.txt" -type file -force  |Out-Null
     Add-Content -Value "Use the rskeymgmt.exe app on the SSRS server to export the encryption key" -Path "$fullfolderPathKey\SSRS_Encryption_Key_not_exported.txt" -Encoding Ascii
 }
@@ -440,14 +446,14 @@ if ($wmi1 -eq 11)
         {
             New-Item "$fullfolderPathKey\SSRS_Encryption_Key_not_exported.txt" -type file -force  |Out-Null
             Add-Content -Value "Use the rskeymgmt.exe app on the SSRS server to export the encryption key" -Path "$fullfolderPathKey\SSRS_Encryption_Key_not_exported.txt" -Encoding Ascii
-            Write-host "Error Connecting to WMI for config file (v11)"
+            Write-Output "Error Connecting to WMI for config file (v11)"
         }
     }
     catch
     {
         New-Item "$fullfolderPathKey\SSRS_Encryption_Key_not_exported.txt" -type file -force  |Out-Null
         Add-Content -Value "Use the rskeymgmt.exe app on the SSRS server to export the encryption key" -Path "$fullfolderPathKey\SSRS_Encryption_Key_not_exported.txt" -Encoding Ascii        
-        Write-host "Error Connecting to WMI for config file (v11) 2"
+        Write-Output "Error Connecting to WMI for config file (v11) 2"
     }
 }
 
@@ -468,14 +474,14 @@ if ($wmi1 -eq 12)
         {
             New-Item "$fullfolderPathKey\SSRS_Encryption_Key_not_exported.txt" -type file -force  |Out-Null
             Add-Content -Value "Use the rskeymgmt.exe app on the SSRS server to export the encryption key" -Path "$fullfolderPathKey\SSRS_Encryption_Key_not_exported.txt" -Encoding Ascii            
-            Write-host "Error Connecting to WMI for config file (v12)"
+            Write-Output "Error Connecting to WMI for config file (v12)"
         }
     }
     catch
     {
         New-Item "$fullfolderPathKey\SSRS_Encryption_Key_not_exported.txt" -type file -force  |Out-Null
         Add-Content -Value "Use the rskeymgmt.exe app on the SSRS server to export the encryption key" -Path "$fullfolderPathKey\SSRS_Encryption_Key_not_exported.txt" -Encoding Ascii
-        Write-host "Error Connecting to WMI for config file (v12) 2"
+        Write-Output "Error Connecting to WMI for config file (v12) 2"
     }
 }
 
@@ -485,7 +491,7 @@ $ErrorActionPreference = $old_ErrorActionPreference
 # ---------------------
 # 5) Timed Subscriptions
 # ---------------------
-Write-Host "Dumping Timed Subscriptions..."
+Write-Output "Dumping Timed Subscriptions..."
 
 # Need an array for this to work
 $rs2012 = @()
@@ -501,7 +507,7 @@ try
     if ($?)
     {
         $websvc1 = 1
-        Write-Host "Found SSRS Webservice running...dumping Timed Subscriptions"
+        Write-Output "Found SSRS Webservice running...dumping Timed Subscriptions"
 
         # WebService is up and running, dump out Subscriptions
         $subscriptions += $rs2012.ListSubscriptions("/"); # use "/" for default native mode site        
@@ -513,12 +519,12 @@ try
     }
     else
     {
-        Write-Host "SSRS Web Service was not running"
+        Write-Output "SSRS Web Service was not running"
     }
 }
 catch
 {
-    Write-Host "SSRS Web Service was not running"
+    Write-Output "SSRS Web Service was not running"
 }
 
 # Reset default PS error handler - for WMI error trapping
@@ -559,12 +565,12 @@ $ErrorActionPreference = 'SilentlyContinue'
 
 if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
 {
-    Write-host "Using SQL Auth"
+    Write-Output "Using SQL Auth"
     $sqlPermissions = Invoke-SqlCmd -ServerInstance $SQLInstance -Query $sqlSecurity -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
 }
 else
 {
-    Write-host "Using Windows Auth"
+    Write-Output "Using Windows Auth"
     $sqlPermissions = Invoke-SqlCmd -ServerInstance $SQLInstance -Query $sqlSecurity -QueryTimeout 10 -erroraction SilentlyContinue
 }
 
@@ -611,6 +617,6 @@ $myCSS | out-file "$fullfolderPathSecurity\HTMLReport.css" -Encoding ascii
 $sqlPermissions | select Path, Name, UserName, RoleName  | ConvertTo-Html  -CSSUri "HtmlReport.css"| Set-Content "$fullfolderPathSecurity\HtmlReport.html"
 
 
-# finish
+# Return to Base
 set-location $BaseFolder
 

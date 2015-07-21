@@ -32,12 +32,17 @@ Param(
   [string]$mypass
 )
 
-
 [string]$BaseFolder = (Get-Item -Path ".\" -Verbose).FullName
-
 
 #  Script Name
 Write-Host  -f Yellow -b Black "09 - SSIS Packages from SSISDB"
+
+# assume localhost
+if ($SQLInstance.length -eq 0)
+{
+	Write-Output "Assuming localhost"
+	$Sqlinstance = 'localhost'
+}
 
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
@@ -49,7 +54,7 @@ if ($SQLInstance.Length -eq 0)
 
 
 # Working
-Write-host "Server $SQLInstance"
+Write-Output "Server $SQLInstance"
 
 import-module "sqlps" -DisableNameChecking -erroraction SilentlyContinue
 
@@ -57,7 +62,7 @@ import-module "sqlps" -DisableNameChecking -erroraction SilentlyContinue
 $Folders = @()
 if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
 {
-	Write-host "Using SQL Auth"
+	Write-Output "Using SQL Auth"
 	
 	# See if the SSISDB Catalog Exists first
 	[bool]$exists = $FALSE
@@ -90,14 +95,14 @@ if ($mypass.Length -ge 1 -and $myuser.Length -ge 1)
 	
 	if ($exists -eq $FALSE)
     {
-        write-host "SSISDB Catalog not found on $SQLInstance"
+        Write-Output "SSISDB Catalog not found on $SQLInstance"
         # Create output folder
         $fullfolderPath = "$BaseFolder\$sqlinstance\"
         if(!(test-path -path $fullfolderPath))
         {
             mkdir $fullfolderPath | Out-Null
         }	
-        Write-Host "SSIS Catalog not found or version NOT 2012+"
+        Write-Output "SSIS Catalog not found or version NOT 2012+"
         echo null > "$BaseFolder\$SQLInstance\09 - SSISDB Catalog - Not found.txt"
         Set-Location $BaseFolder
         exit
@@ -115,13 +120,13 @@ if ($mypass.Length -ge 1 -and $myuser.Length -ge 1)
 }
 else
 {
-	Write-host "Using Windows Auth"
+	Write-Output "Using Windows Auth"
 	
 	# See if the SSISDB Catalog Exists first		
 	$exists = $FALSE
 
     # we set this to null so that nothing is displayed
-	$null = [reflection.assembly]::LoadWithPartialName("Microsoft.SqlServer.Smo")
+	[reflection.assembly]::LoadWithPartialName("Microsoft.SqlServer.Smo") | Out-Null
 	   
 	# Get reference to database instance
 	$server = new-object ("Microsoft.SqlServer.Management.Smo.Server") $SQLInstance
@@ -145,14 +150,14 @@ else
 
 	if ($exists -eq $FALSE)
     {
-        write-host "SSISDB Catalog not found on $SQLInstance"
+        Write-Output "SSISDB Catalog not found on $SQLInstance"
         # Create output folder
         $fullfolderPath = "$BaseFolder\$sqlinstance\"
         if(!(test-path -path $fullfolderPath))
         {
             mkdir $fullfolderPath | Out-Null
         }	
-        Write-Host "SSIS Catalog not found or version NOT 2012+"
+        Write-Output "SSIS Catalog not found or version NOT 2012+"
         echo null > "$BaseFolder\$SQLInstance\09 - SSISDB Catalog - Not found.txt"
         Set-Location $BaseFolder
         exit
@@ -177,7 +182,7 @@ if(!(test-path -path $fullfolderPath))
     mkdir $fullfolderPath | Out-Null
 }
 	
-Write-Host "Writing out Folders/Projects/Packages in ISPAC format..."
+Write-Output "Writing out Folders/Projects/Packages in ISPAC format..."
 Foreach ($folder in $Folders)
 {
     $foldername = $folder.folder
@@ -196,7 +201,7 @@ Foreach ($folder in $Folders)
 Set-Location $fullfolderPath
 $destfrag = "\"+$sqlinstance+"_SSISDB_Master_Key.txt"
 $destfile = $backupfolder+$destfrag
-Write-Host "Writing out Key File..."
+Write-Output "Writing out Key File..."
 
 $myquery = "use SSISDB; "
 $myquery += " backup master key to file = '$destfile'"
@@ -216,7 +221,7 @@ else
 }
 
 # Copy Key File down from admin share
-Write-host "Copying down key file..."
+Write-Output "Copying down key file..."
 
 if ($unc -eq 1)
 {
@@ -253,7 +258,8 @@ $myrestorecmd = "Restore master key from file = 'SSISDB_Master_Key.txt' `
        Encryption by password = 'SomeNewSecurePassword$!' -- New Password
        Force"
 
-Write-Host "Writing out Master Key Restore Command..."
+Write-Output "Writing out Master Key Restore Command..."
 $myrestorecmd | out-file $fullfolderPath\Master_Key_Restore_cmd.sql -Encoding ascii
 
+# Return to Base
 set-location $BaseFolder

@@ -1,11 +1,11 @@
 ﻿<#
 .SYNOPSIS
-    Gets the SQL Server Credentials on the target server
+    Gets the SQL Server Credential Objects from the target server
 	
 .DESCRIPTION
    Writes the SQL Server Credentials out to the "01 - Server Credentials" folder
    One file per Credential
-   Credentials are used for PKI, TDE, Replication, Azure Connections, Remote Server connections for Agent Proxies or Database Synonyms   
+   Credentials are used for PKI, TDE, Replication, Azure Connections, Remote Server connections for Agent Proxies or Database Synonyms
    
 .EXAMPLE
     01_Server_Credentials.ps1 localhost
@@ -39,32 +39,38 @@ Param(
 
 Write-Host  -f Yellow -b Black "01 - Server Credentials"
 
+# assume localhost
+if ($SQLInstance.length -eq 0)
+{
+	Write-Output "Assuming localhost"
+	$Sqlinstance = 'localhost'
+}
+
+
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
 {
-    Write-host -f yellow "Usage: ./01_Server_Credentials.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
+    Write-Host -f yellow "Usage: ./01_Server_Credentials.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
     Set-Location $BaseFolder
     exit
 }
 
 # Working
-Write-host "Server $SQLInstance"
+Write-Output "Server $SQLInstance"
 
-# fix target servername if given a SQL named instance
-$WinServer = ($SQLInstance -split {$_ -eq "," -or $_ -eq "\"})[0]
 
 # Server connection check
 $serverauth = "win"
 if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
 {
-	Write-host "Testing SQL Auth"
+	Write-Output "Testing SQL Auth"
 	try
     {
         $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
         if($results -ne $null)
         {
             $myver = $results.Column1
-            Write-Host $myver
+            Write-Output $myver
             $serverauth="sql"
         }	
 	}
@@ -77,14 +83,14 @@ if ($mypass.Length -ge 1 -and $myuser.Length -ge 1)
 }
 else
 {
-	Write-host "Testing Windows Auth"
+	Write-Output "Testing Windows Auth"
  	Try
     {
         $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -QueryTimeout 10 -erroraction SilentlyContinue
         if($results -ne $null)
         {
             $myver = $results.Column1
-            Write-Host $myver
+            Write-Output $myver
         }
 	}
 	catch
@@ -102,7 +108,7 @@ else
 # Set Local Vars
 $server = $SQLInstance
 
-
+# Create SMO Object
 if ($serverauth -eq "win")
 {
     $srv = New-Object "Microsoft.SqlServer.Management.SMO.Server" $server
@@ -115,22 +121,23 @@ else
     $srv.ConnectionContext.set_Password($mypass)
 }
 
-
-
-
 # Dump Server Credentials
-Write-Host "$SQLInstance - Credentials"
+Write-Output "$SQLInstance - Credentials"
 $Credentials_path  = "$BaseFolder\$SQLInstance\01 - Server Credentials\"
 if(!(test-path -path $Credentials_path))
 {
     mkdir $Credentials_path | Out-Null	
 }
 
-$mySQLquery = "USE master; SELECT `
-credential_id, name, credential_identity, create_date, modify_date, target_type, target_id
+$mySQLquery = 
+"USE master; 
+
+SELECT
+    credential_id, name, credential_identity, create_date, modify_date, target_type, target_id
 FROM
-sys.credentials
-order by 1
+    sys.credentials
+order by 
+    1
 "
 
 # connect correctly
@@ -143,8 +150,9 @@ else
     $sqlresults = Invoke-SqlCmd -ServerInstance $SQLInstance -Query $mySQLquery -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
 }
 
-# Output to file
+# Send each Object to the output file
 foreach ($Cred in $sqlresults)
+	# Fixup characters that make for bad filenames
 {   $myFixedCredName = $Cred.name.replace('\','_')
 	$myFixedCredName = $myFixedCredName.replace('/', '-')
 	$myFixedCredName = $myFixedCredName.replace('[','(')
@@ -157,8 +165,5 @@ foreach ($Cred in $sqlresults)
 }
 
 
-# finish
+# Return to Base
 set-location $BaseFolder
-
-
-

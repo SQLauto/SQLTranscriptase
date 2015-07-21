@@ -39,7 +39,15 @@ Set-StrictMode -Version latest
 
 Write-Host  -f Yellow -b Black "01 - Server Shares"
 
-# Usage Check
+# assume localhost
+if ($SQLInstance.length -eq 0)
+{
+	Write-Output "Assuming localhost"
+	$Sqlinstance = 'localhost'
+}
+
+
+# Parameter Check
 if ($SQLInstance.Length -eq 0) 
 {
     Write-host -b black -f yellow "Usage: ./01_Server_Shares.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
@@ -48,29 +56,45 @@ if ($SQLInstance.Length -eq 0)
 }
 
 
-# Working
-Write-host "Server $SQLInstance"
+# Im Working Here...
+Write-Output "Server $SQLInstance"
 
-
+# Need a string array to hold the Shares Objects from WMI
 $ShareArray = @()
-# We connect to the Windows Server Name, not the SQL Server Named Instance
+
+# We connect to the Windows Server Name, not the SQL Server Named Instance, so Split at the backslash
 $WinServer = ($SQLInstance -split {$_ -eq "," -or $_ -eq "\"})[0]
 
+# Turn off automatic error handling, allow the error to surface into the ($?) object below
 $old_ErrorActionPreference = $ErrorActionPreference
 $ErrorActionPreference = 'SilentlyContinue'
 
+# Ping machine first, if dead, then dont even try WMI, it will hang
+If (Test-Connection $WinServer -count 1 -quiet) 
+{
+    Write-Output 'The host responded'
+}
+else
+{
+    Write-Output 'The Queen is Dead. Long live the Queen'
+    exit
+}
+
+# Do WMI Call
 try
 {
-
     $ShareArray = Get-WmiObject -Computer $WinServer -class Win32_Share | select name, path, description | Where-Object -filterscript {$_.Name -ne "ADMIN$" -and $_.Name -ne "IPC$"} | sort-object name
     #$ShareArray | Out-GridView
+	
+	# Check "Automatic Variable"
+	# https://technet.microsoft.com/en-us/library/hh847768.aspx
     if ($?)
     {
-        Write-Host "Good WMI Connection"
+        Write-Output "WMI Connected"
     }
     else
     {
-    #Warn User
+		#Warn User
         Write-Host -b black -f red "Access Denied using WMI against target server"
         
         $fullfolderpath = "$BaseFolder\$SQLInstance\"
@@ -84,6 +108,7 @@ try
         exit
     }
 }
+
 catch
 {
     #Warn User
@@ -104,7 +129,7 @@ catch
 # Reset default PS error handler - for WMI error trapping
 $ErrorActionPreference = $old_ErrorActionPreference 
 
-
+# Create Output folder
 $fullfolderPath = "$BaseFolder\$sqlinstance\01 - Server Shares\"
 if(!(test-path -path $fullfolderPath))
 {
@@ -112,7 +137,7 @@ if(!(test-path -path $fullfolderPath))
 }
 
 
-# Create some CSS for help in column formatting
+# Create some CSS to help my HTML in rollover highlighting
 $myCSS = 
 "
 table
@@ -144,12 +169,14 @@ td
         Padding: 1px 4px 1px 4px;
     }
 "
-
+# Create the CSS File
 $myCSS | out-file "$fullfolderPath\HTMLReport.css" -Encoding ascii
 
+# Use the pipeline to shape, select, format and redirect my Object output
 $mySettings = $ShareArray
+
+# Iterate Out
 $mySettings | select Name, Path, Description  | ConvertTo-Html  -CSSUri "HtmlReport.css"| Set-Content "$fullfolderPath\HtmlReport.html"
 
-
+# Return to base
 set-location "$BaseFolder"
-

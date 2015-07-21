@@ -36,7 +36,15 @@ Param(
 )
 
 [string]$BaseFolder = (Get-Item -Path ".\" -Verbose).FullName
+
 Write-Host  -f Yellow -b Black "03 - .NET Assemblies"
+
+# assume localhost
+if ($SQLInstance.length -eq 0)
+{
+	Write-Output "Assuming localhost"
+	$Sqlinstance = 'localhost'
+}
 
 
 # Usage Check
@@ -48,21 +56,21 @@ if ($SQLInstance.Length -eq 0)
 }
 
 # Working
-Write-host "Server $SQLInstance"
+Write-Output "Server $SQLInstance"
 
 
 # Server connection check
 $serverauth = "win"
 if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
 {
-	Write-host "Testing SQL Auth"
+	Write-Output "Testing SQL Auth"
 	try
     {
         $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
         if($results -ne $null)
         {
             $myver = $results.Column1
-            Write-Host $myver
+            Write-Output $myver
             $serverauth="sql"
         }	
 	}
@@ -75,14 +83,14 @@ if ($mypass.Length -ge 1 -and $myuser.Length -ge 1)
 }
 else
 {
-	Write-host "Testing Windows Auth"
+	Write-Output "Testing Windows Auth"
  	Try
     {
         $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -QueryTimeout 10 -erroraction SilentlyContinue
         if($results -ne $null)
         {
             $myver = $results.Column1
-            Write-Host $myver
+            Write-Output $myver
         }
 	}
 	catch
@@ -102,7 +110,7 @@ $server 	= $SQLInstance
 
 if ($serverauth -eq "win")
 {
-    $srv    = New-Object "Microsoft.SqlServer.Management.SMO.Server" $server
+    $srv = New-Object "Microsoft.SqlServer.Management.SMO.Server" $server
 }
 else
 {
@@ -173,7 +181,7 @@ foreach($sqlDatabase in $srv.databases)
     # Any results?
     if ($results.count -gt 0)
     {
-        Write-Host "Scripting out .NET Assemblies for: "$fixedDBName
+        Write-Output "Scripting out .NET Assemblies for: "$fixedDBName
     }
 
     foreach ($assembly in $results)
@@ -194,7 +202,7 @@ foreach($sqlDatabase in $srv.databases)
 }
 
 
-# finish
+# Return to Base
 set-location $BaseFolder
 
 

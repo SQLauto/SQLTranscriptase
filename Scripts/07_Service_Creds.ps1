@@ -32,10 +32,16 @@ Param(
 )
 
 
-
 [string]$BaseFolder = (Get-Item -Path ".\" -Verbose).FullName
 
 Write-Host  -f Yellow -b Black "07 - Service Credentials"
+
+# assume localhost
+if ($SQLInstance.length -eq 0)
+{
+	Write-Output "Assuming localhost"
+	$Sqlinstance = 'localhost'
+}
 
 
 if ($SQLInstance.Length -eq 0) 
@@ -47,7 +53,7 @@ if ($SQLInstance.Length -eq 0)
 
 
 # Working
-Write-host "Server $SQLInstance"
+Write-Output "Server $SQLInstance"
 
 
 # If SQLInstance is a named instance, drop the instance part so we can connect to the Windows server only
@@ -75,7 +81,7 @@ try
     $results1 = gwmi -class win32_service  -computer $SQLInstance2 -filter "name like 'MSSQLSERVER%' or name like 'MsDtsServer%' or name like 'MSSQLFDLauncher%'  or Name like 'MSSQLServerOLAPService%'  or Name like 'SQL Server Distributed Replay Client%'  or Name like 'SQL Server Distributed Replay Controller%'  or Name like 'SQLBrowser%'  or Name like 'SQLSERVERAGENT%'  or Name like 'SQLWriter%'  or Name like 'ReportServer%' or Name like 'SQLAgent%' or Name like 'MSSQL%'" 
     if ($?)
     {
-        Write-Host "WMI Connected"
+        Write-Output "WMI Connected"
     }
     else
     {
@@ -155,5 +161,5 @@ $myCSS | out-file "$fullfolderPath\HTMLReport.css" -Encoding ascii
 $mySettings = $results1
 $mySettings | select Name, startName  | ConvertTo-Html  -CSSUri "HtmlReport.css"| Set-Content "$fullfolderPath\HtmlReport.html"
 
-
+# Return to Base
 set-location $BaseFolder

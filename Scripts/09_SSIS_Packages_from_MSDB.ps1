@@ -32,12 +32,18 @@ Param(
 )
 
 
-
 [string]$BaseFolder = (Get-Item -Path ".\" -Verbose).FullName
 
 
 #  Script Name
 Write-Host  -f Yellow -b Black "09 - SSIS Packages from MSDB"
+
+# assume localhost
+if ($SQLInstance.length -eq 0)
+{
+	Write-Output "Assuming localhost"
+	$Sqlinstance = 'localhost'
+}
 
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
@@ -49,7 +55,7 @@ if ($SQLInstance.Length -eq 0)
 
 
 # Working
-Write-host "Server $SQLInstance"
+Write-Output "Server $SQLInstance"
 
 import-module "sqlps" -DisableNameChecking -erroraction SilentlyContinue
 	
@@ -62,12 +68,12 @@ if ($mypass.Length -ge 1 -and $myuser.Length -ge 1)
         if($results -ne $null)
         {
             $myver = $results.Column1
-            Write-Host $myver
+            Write-Output $myver
         }	
 	}
 	catch
     {
-	    Write-Host "Cannot Connect to $SQLInstance" 
+	    Write-Output "Cannot Connect to $SQLInstance" 
         set-location $BaseFolder
 	    exit
 	}
@@ -82,12 +88,12 @@ else
         if($results -ne $null)
         {
             $myver = $results.Column1
-            Write-Host $myver
+            Write-Output $myver
         }
 	}
 	catch
     {
-        Write-Host "Cannot Connect to $SQLInstance"
+        Write-Output "Cannot Connect to $SQLInstance"
         set-location $BaseFolder
 	    exit
 	}
@@ -106,13 +112,13 @@ $fullfolderPath = "$BaseFolder\$sqlinstance\09 - SSIS_MSDB"
 if ($myver -like "9.0*")
 {
 
-    Write-host "SSIS is 2005"
+    Write-Output "SSIS is 2005"
 
     $Packages = @()
     # SQL Auth
     if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
         {
-        Write-host "Using SQL Auth"
+        Write-Output "Using SQL Auth"
 
         $Packages +=  Invoke-Sqlcmd -MaxCharLength 10000000 -ServerInstance $SQLInstance -Username $myuser -Password $mypass -Query "        
         with ChildFolders
@@ -150,7 +156,7 @@ if ($myver -like "9.0*")
     }
     else
     {
-        Write-host "Using Windows Auth"
+        Write-Output "Using Windows Auth"
         $Packages +=  Invoke-Sqlcmd -MaxCharLength 10000000 -ServerInstance $SQLInstance -Query "
         with ChildFolders
         as
@@ -202,12 +208,12 @@ if ($myver -like "9.0*")
 # SSIS 2008 +
 else
 {
-    Write-Host "SSIS is 2008+"
+    Write-Output "SSIS is 2008+"
 	
     $Packages = @()
     if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
         {
-        Write-host "Using SQL Auth"
+        Write-Output "Using SQL Auth"
 
         $Packages +=  Invoke-Sqlcmd -MaxCharLength 10000000 -ServerInstance $SQLInstance -Username $myuser -Password $mypass -Query "
         with ChildFolders
@@ -244,7 +250,7 @@ else
     }
     else
     {
-        Write-host "Using Windows Auth"
+        Write-Output "Using Windows Auth"
         $Packages +=  Invoke-Sqlcmd -MaxCharLength 10000000 -ServerInstance $SQLInstance -Query "
         with ChildFolders
         as
@@ -294,5 +300,5 @@ else
     }
 }
 
+# Return to Base
 set-location $BaseFolder
-

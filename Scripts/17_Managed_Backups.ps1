@@ -40,6 +40,14 @@ Param(
 Write-Host  -f Yellow -b Black "17 - Managed Backups"
 
 
+# assume localhost
+if ($SQLInstance.length -eq 0)
+{
+	Write-Output "Assuming localhost"
+	$Sqlinstance = 'localhost'
+}
+
+
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
 {
@@ -49,7 +57,7 @@ if ($SQLInstance.Length -eq 0)
 }
 
 # Working
-Write-host "Server $SQLInstance"
+Write-Output "Server $SQLInstance"
 
 import-module "sqlps" -DisableNameChecking -erroraction SilentlyContinue
 
@@ -57,7 +65,7 @@ import-module "sqlps" -DisableNameChecking -erroraction SilentlyContinue
 $serverauth = "win"
 if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
 {
-	Write-host "Testing SQL Auth"
+	Write-Output "Testing SQL Auth"
 	try
     {
         $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
@@ -77,14 +85,14 @@ if ($mypass.Length -ge 1 -and $myuser.Length -ge 1)
 }
 else
 {
-	Write-host "Testing Windows Auth"
+	Write-Output "Testing Windows Auth"
  	Try
     {
         $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -QueryTimeout 10 -erroraction SilentlyContinue
         if($results -ne $null)
         {
             $myver = $results.Column1
-            Write-Host $myver
+            Write-Output $myver
         }
 	}
 	catch
@@ -100,38 +108,44 @@ else
 
 IF ( $ver -eq "7" )
 {
-   Write-Host "SQL Server 7"
+   Write-Output "SQL Server 7"
 }
 
 IF ( $ver -eq "8" )
 {
-   Write-Host "SQL Server 2000"
+   Write-Output "SQL Server 2000"
 }
 
 IF ( $ver -eq "9" )
 {
-   Write-Host "SQL Server 2005"
+   Write-Output "SQL Server 2005"
 }
 
 IF ( $ver -eq "10" )
 {
-   Write-Host "SQL Server 2008/R2"
+   Write-Output "SQL Server 2008/R2"
 }
 
 IF ( $ver -eq "11" )
 {
-   Write-Host "SQL Server 2012"
+   Write-Output "SQL Server 2012"
 }
 
 IF ( $ver -eq "12" )
 {
-   Write-Host "SQL Server 2014"
+   Write-Output "SQL Server 2014"
 }
+
+IF ( $ver -eq "13" )
+{
+   Write-Output "SQL Server 2016"
+}
+
 
 # Bail if not 2014 or greater
 if ($ver -lt 12)
 {
-    Write-Host "Not 2014 or greater...exiting"
+    Write-Output "Not 2014 or greater...exiting"
     echo null > "$BaseFolder\$SQLInstance\17 - Managed Backups - Requires SQL 2014 or greater.txt"
     Set-Location $BaseFolder    
     exit

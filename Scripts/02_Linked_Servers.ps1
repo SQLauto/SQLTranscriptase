@@ -41,18 +41,25 @@ Import-Module “sqlps” -DisableNameChecking -erroraction SilentlyContinue
 #  Script Name
 Write-Host  -f Yellow -b Black "02 - Linked Servers"
 
+# assume localhost
+if ($SQLInstance.length -eq 0)
+{
+	Write-Output "Assuming localhost"
+	$Sqlinstance = 'localhost'
+}
+
 
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
 {
     Write-host -f yellow "Usage: ./02_Linked_Servers.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
-      Set-Location $BaseFolder
+    Set-Location $BaseFolder
     exit
 }
 
 
 # Working
-Write-host "Server $SQLInstance"
+Write-Output "Server $SQLInstance"
 
 
 
@@ -99,7 +106,7 @@ $LinkedServers_path	= $fullfolderPath+"\Linked_Servers.sql"
 # Test for Username/Password needed to connect - else assume WinAuth passthrough
 if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
 {
-	Write-host "Using Sql Auth"
+	Write-Output "Using Sql Auth"
 
     $srv = New-Object "Microsoft.SqlServer.Management.SMO.Server" $server
     $srv.ConnectionContext.LoginSecure=$false
@@ -127,6 +134,7 @@ else
 
 }
 
+# Return to Base
 set-location $BaseFolder
 
 

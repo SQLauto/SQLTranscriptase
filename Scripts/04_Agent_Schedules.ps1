@@ -36,6 +36,13 @@ Param(
 #  Script Name
 Write-Host  -f Yellow -b Black "04 - Agent Schedules"
 
+# assume localhost
+if ($SQLInstance.length -eq 0)
+{
+	Write-Output "Assuming localhost"
+	$Sqlinstance = 'localhost'
+}
+
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
 {
@@ -46,7 +53,7 @@ if ($SQLInstance.Length -eq 0)
 [string]$BaseFolder = (Get-Item -Path ".\" -Verbose).FullName
 
 # Working
-Write-host "Server $SQLInstance"
+Write-Output "Server $SQLInstance"
 
 Import-Module “sqlps” -DisableNameChecking -erroraction SilentlyContinue
 
@@ -79,7 +86,7 @@ if(!(test-path -path $fullfolderPath))
 # Test for Username/Password needed to connect - else assume WinAuth passthrough
 if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
 {
-	Write-host "Using SQL Auth"
+	Write-Output "Using SQL Auth"
 
     $old_ErrorActionPreference = $ErrorActionPreference
     $ErrorActionPreference = 'SilentlyContinue'
@@ -87,7 +94,7 @@ if ($mypass.Length -ge 1 -and $myuser.Length -ge 1)
     $outdata = Invoke-SqlCmd -query $sql  -Server $SQLInstance –Username $myuser –Password $mypass 
     if ($outdata -eq $null )
     {
-        write-host "No Agent Schedules Found on $SQLInstance"
+        Write-Output "No Agent Schedules Found on $SQLInstance"
         echo null > "$BaseFolder\$SQLInstance\04 - No Agent Schedules Found.txt"
         Set-Location $BaseFolder
         exit
@@ -102,7 +109,7 @@ if ($mypass.Length -ge 1 -and $myuser.Length -ge 1)
 }
 else
 {
-	Write-host "Using Windows Auth"
+	Write-Output "Using Windows Auth"
 
     $old_ErrorActionPreference = $ErrorActionPreference
     $ErrorActionPreference = 'SilentlyContinue'
@@ -110,7 +117,7 @@ else
     $Outdata = Invoke-SqlCmd -query $sql -Server $SQLInstance
     if ($outdata -eq $null )
     {
-        write-host "No Agent Schedules Found on $SQLInstance"
+        Write-Output "No Agent Schedules Found on $SQLInstance"
         echo null > "$BaseFolder\$SQLInstance\04 - No Agent Schedules Found.txt"
         Set-Location $BaseFolder
         exit
@@ -124,6 +131,7 @@ else
     
 }
 
+# Return To Base
 set-location $BaseFolder
 
 

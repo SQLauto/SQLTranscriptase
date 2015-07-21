@@ -38,6 +38,12 @@ Param(
 
 Write-Host  -f Yellow -b Black "01 - Server Storage"
 
+# assume localhost
+if ($SQLInstance.length -eq 0)
+{
+	Write-Output "Assuming localhost"
+	$Sqlinstance = 'localhost'
+}
 
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
@@ -49,7 +55,7 @@ if ($SQLInstance.Length -eq 0)
 
 
 # Working
-Write-host "Server $SQLInstance"
+Write-Output "Server $SQLInstance"
 
 
 # Split out servername only from named instance
@@ -70,7 +76,7 @@ try
 	$VolumeArray = Get-WmiObject -Computer $WinServer Win32_Volume | sort-object name 
     if ($?)
     {
-        Write-Host "Good WMI Connection"
+        Write-Output "Good WMI Connection"
     }
     else
     {
@@ -155,5 +161,5 @@ $mySettings = $VolumeArray
 
 $mySettings | select Name, Label, FileSystem, DriveType, $VolumeTotalGB, $VolumeUsedGB, $VolumeFreeGB, BootVolume, DriveLetter, BlockSize  | ConvertTo-Html  -CSSUri "HtmlReport.css"| Set-Content "$fullfolderPath\HtmlReport.html"
 
-
+# Return to Base
 set-location $BaseFolder

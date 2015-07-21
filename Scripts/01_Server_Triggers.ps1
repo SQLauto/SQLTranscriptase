@@ -42,6 +42,13 @@ Import-Module “sqlps” -DisableNameChecking -erroraction SilentlyContinue
 #  Script Name
 Write-Host  -f Yellow -b Black "01 - Server Triggers"
 
+# assume localhost
+if ($SQLInstance.length -eq 0)
+{
+	Write-Output "Assuming localhost"
+	$Sqlinstance = 'localhost'
+}
+
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
 {
@@ -52,7 +59,7 @@ if ($SQLInstance.Length -eq 0)
 
 
 # Working
-Write-host "Server $SQLInstance"
+Write-Output "Server $SQLInstance"
 
 
 $sql = 
@@ -74,7 +81,7 @@ WHERE (tr.parent_class = 100)
 # Test for Username/Password needed to connect - else assume WinAuth passthrough
 if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
 {
-	Write-host "Using SQL Auth"
+	Write-Output "Using SQL Auth"
 
     $old_ErrorActionPreference = $ErrorActionPreference
     $ErrorActionPreference = 'SilentlyContinue'
@@ -82,7 +89,7 @@ if ($mypass.Length -ge 1 -and $myuser.Length -ge 1)
 	$results = Invoke-SqlCmd -query $sql -Server $SQLInstance –Username $myuser –Password $mypass 
 	if ($results -eq $null)
     {
-        write-host "No Server Triggers Found on $SQLInstance"        
+        Write-Output "No Server Triggers Found on $SQLInstance"        
         echo null > "$BaseFolder\$SQLInstance\01 - No Server Triggers Found.txt"
         Set-Location $BaseFolder
         exit
@@ -108,7 +115,7 @@ if ($mypass.Length -ge 1 -and $myuser.Length -ge 1)
 }
 else
 {
-	Write-host "Using Windows Auth"
+	Write-Output "Using Windows Auth"
 
     $old_ErrorActionPreference = $ErrorActionPreference
     $ErrorActionPreference = 'SilentlyContinue'
@@ -116,7 +123,7 @@ else
 	$results = Invoke-SqlCmd -query $sql -Server $SQLInstance	
     if ($results -eq $null)
     {
-        write-host "No Server Triggers Found on $SQLInstance"        
+        Write-Output "No Server Triggers Found on $SQLInstance"        
         echo null > "$BaseFolder\$SQLInstance\01 - No Server Triggers Found.txt"
         Set-Location $BaseFolder
         exit
@@ -139,4 +146,5 @@ else
 	    
 }
 
+# Return to Base
 set-location $BaseFolder

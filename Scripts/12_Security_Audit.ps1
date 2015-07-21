@@ -3,14 +3,14 @@
     Gets SQL Server Security Information from the target server
 	
 .DESCRIPTION
-   Writes out the results of 5 SQL Queries to a sub folder of the Server Name
+   Writes out the results of 5 other scripts to a sub folder of the Server Name
    One HTML file for each Query
    
 .EXAMPLE
-   12_Security_Audit.ps1 localhost
+    SQLSecurityAudit.ps1 localhost
 	
 .EXAMPLE
-    12_Security_Audit.ps1 server01 sa password
+    SQLSecurityAudit.ps1 server01 sa password
 
 .Inputs
     ServerName, [SQLUser], [SQLPassword]
@@ -19,11 +19,10 @@
 	HTML Files
 	
 .NOTES
-    George Walkey
-    Richmond, VA USA
+    PF
 
 .LINK
-    https://github.com/gwalkey
+    http://d0wiki
 	
 #>
 
@@ -41,42 +40,40 @@ Import-Module "sqlps" -DisableNameChecking -erroraction SilentlyContinue
 Set-Location $BaseFolder
 
 #  Script Name
-Write-Host  -f Yellow -b Black "12 - SQL Security Audit"
-
+Write-Host  -f Yellow -b Black "12 - Security Audit"
 
 # assume localhost
 if ($SQLInstance.length -eq 0)
 {
-	Write-Host "Assuming localhost"
+	Write-Output "Assuming localhost"
 	$Sqlinstance = 'localhost'
 }
-
 
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
 {
-    Write-host -f yellow -b black "Usage: ./SQLSecurityAudit.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
-       Set-Location $BaseFolder
+    Write-host -f yellow -b black "Usage: ./12_Security_Audit.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
+    Set-Location $BaseFolder
     exit
 }
 
 
 # Working
-Write-host "Server $SQLInstance"
+Write-Output "Server $SQLInstance"
 
 
 # Server connection check and Get Running Version
 $serverauth = "win"
 if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
 {
-	Write-host "Testing SQL Auth"
+	Write-Output "Testing SQL Auth"
 	try
     {
         $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
         if($results -ne $null)
         {
             $myver = $results.Column1
-            Write-Host $myver
+            Write-Output $myver
             $serverauth="sql"
         }	
 	}
@@ -89,14 +86,14 @@ if ($mypass.Length -ge 1 -and $myuser.Length -ge 1)
 }
 else
 {
-	Write-host "Testing Windows Auth"
+	Write-Output "Testing Windows Auth"
  	Try
     {
         $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -QueryTimeout 10 -erroraction SilentlyContinue
         if($results -ne $null)
         {
             $myver = $results.Column1
-            Write-Host $myver
+            Write-Output $myver
         }
 	}
 	catch
@@ -144,7 +141,7 @@ $sql1 =
 --- Q1 Logins, Default DB,  Auth Type, and FixedServerRole Memberships
 SELECT 
 	name as 'Login', 
-	dbname as 'DBName',
+	dbname as 'DefaultDB',
 	[language],  
 	CONVERT(CHAR(10),CASE denylogin WHEN 1 THEN 'X' ELSE '--' END) AS IsDenied, 
 	CONVERT(CHAR(10),CASE isntname WHEN 1 THEN 'X' ELSE '--' END) AS IsWinAuthentication, 
@@ -223,19 +220,19 @@ $myCSS | out-file "$fullfolderPath\HTMLReport.css" -Encoding ascii
 # Run Query 1
 if ($serverauth -ne "win")
 {
-	Write-host "Using Sql Auth"
+	Write-Output "Using Sql Auth"
 	$results = Invoke-SqlCmd -query $sql1 -Server $SQLInstance –Username $myuser –Password $mypass 
 }
 else
 {
-	Write-host "Using Windows Auth"	
+	Write-Output "Using Windows Auth"	
 	$results = Invoke-SqlCmd -query $sql1 -Server $SQLInstance      
 }
 
 # Write out rows
-$results | select Login, DBName, language, IsDenied, IsWinAuthentication, IsWinGroup, CreateDate, UpdateDate, ServerRoles, IsSysAdmin| ConvertTo-Html  -CSSUri "HtmlReport.css"| Set-Content "$fullfolderPath\1_Server_Logins.html"
+$results | select Login, DefaultDB, language, IsDenied, IsWinAuthentication, IsWinGroup, CreateDate, UpdateDate, ServerRoles, IsSysAdmin| ConvertTo-Html  -CSSUri "HtmlReport.css"| Set-Content "$fullfolderPath\1_Server_Logins.html"
 
-
+# Return to Base
 set-location $BaseFolder
 
 # -----------------------
@@ -321,7 +318,7 @@ foreach($sqlDatabase in $srv.databases)
     	$results3 = Invoke-SqlCmd -query $sql3 -Server $SQLInstance      
     }
 
-    # Write out rows
+    # Write out rows    
     $results3 | select Role_Name, User_Name | ConvertTo-Html  -CSSUri "HtmlReport.css"| Set-Content "$output_path\3_Roles_Per_User.html"
 
     set-location $BaseFolder
@@ -409,12 +406,11 @@ foreach($sqlDatabase in $srv.databases)
 
     # Write out rows    
     $results5 | select User, PermType, permission_name, SchemaName, ObjectName, ObjectType, ColumnName, IsGrantOption | ConvertTo-Html  -CSSUri "HtmlReport.css"| Set-Content "$output_path\5_Object_Permissions.html"
-
+    
     set-location $BaseFolder
-
         
 }
 
 
-
+# Return to Base
 set-location $BaseFolder
