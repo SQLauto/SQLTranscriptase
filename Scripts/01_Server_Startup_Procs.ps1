@@ -90,7 +90,7 @@ else
     if($results -ne $null)
     {
         $myver = $results.Column1
-        #Write-Host $myver
+        Write-Host $myver
     }
 	}
 	catch

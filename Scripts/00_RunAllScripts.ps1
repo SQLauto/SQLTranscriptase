@@ -1,9 +1,9 @@
 <#
 .SYNOPSIS
-    Runs all other Powershell ps1 scripts for the target server
+    Runs all other Powershell scripts for the target server
 	
 .DESCRIPTION
-    Runs all other Powershell ps1 scripts for the target server    
+    Runs all other Powershell scripts for the target server    
 	
 .EXAMPLE
     00_RunAllScripts.ps1 localhost
@@ -15,7 +15,7 @@
     ServerName, [SQLUser], [SQLPassword]
 
 .Outputs
-
+    Runa all other Powershell scripts for the target server
 	
 .NOTES
     George Walkey
@@ -110,13 +110,12 @@ set-location $BaseFolder
 & .\01_Server_Roles.ps1 $SQLInstance $myuser $mypass
 & .\01_Server_Settings.ps1 $SQLInstance $myuser $mypass
 & .\01_Server_Shares.ps1 $SQLInstance $myuser $mypass
-& .\01_Server_Startup_Procs.ps1 $SQLInstance $myuser $mypass
 & .\01_Server_Storage.ps1 $SQLInstance $myuser $mypass
 & .\01_Server_Triggers.ps1 $SQLInstance $myuser $mypass
 & .\02_Linked_Servers.ps1 $SQLInstance $myuser $mypass
 & .\03_NET_Assemblies.ps1 $SQLInstance $myuser $mypass
-& .\04_Agent_Jobs.ps1 $SQLInstance $myuser $mypass
 & .\04_Agent_Alerts.ps1 $SQLInstance $myuser $mypass
+& .\04_Agent_Jobs.ps1 $SQLInstance $myuser $mypass
 & .\04_Agent_Operators.ps1 $SQLInstance $myuser $mypass
 & .\04_Agent_Proxies.ps1 $SQLInstance $myuser $mypass
 & .\04_Agent_Schedules.ps1 $SQLInstance $myuser $mypass
@@ -133,6 +132,7 @@ set-location $BaseFolder
 & .\15_Extended_Events.ps1 $SQLInstance $myuser $mypass
 & .\16_Audits.ps1 $SQLInstance $myuser $mypass
 & .\17_Managed_Backups.ps1 $SQLInstance $myuser $mypass
+& .\01_Server_Startup_Procs.ps1 $SQLInstance $myuser $mypass
 #& .\20_DataBase_Objects.ps1 $SQLInstance $myuser $mypass
 
 

@@ -61,6 +61,47 @@ if ($SQLInstance.Length -eq 0)
 # Working
 Write-Output "Server $SQLInstance"
 
+# Server connection check
+$serverauth = "win"
+if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
+{
+	Write-Output "Testing SQL Auth"
+	try
+    {
+        $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
+        if($results -ne $null)
+        {
+            $myver = $results.Column1
+            Write-Output $myver
+            $serverauth="sql"
+        }	
+	}
+	catch
+    {
+		Write-Host -f red "$SQLInstance appears offline - Try Windows Auth?"
+        Set-Location $BaseFolder
+		exit
+	}
+}
+else
+{
+	Write-Output "Testing Windows Auth"
+ 	Try
+    {
+        $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -QueryTimeout 10 -erroraction SilentlyContinue
+        if($results -ne $null)
+        {
+            $myver = $results.Column1
+            Write-Output $myver
+        }
+	}
+	catch
+    {
+	    Write-Host -f red "$SQLInstance appears offline - Try SQL Auth?" 
+        Set-Location $BaseFolder
+	    exit
+	}
+}
 
 $sql = 
 "
@@ -76,8 +117,6 @@ WHERE (tr.parent_class = 100)
 "
 
 
-
-	
 # Test for Username/Password needed to connect - else assume WinAuth passthrough
 if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
 {

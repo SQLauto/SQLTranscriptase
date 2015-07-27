@@ -57,7 +57,6 @@ if ($SQLInstance.Length -eq 0)
 # Working
 Write-Output "Server $SQLInstance"
 
-import-module "sqlps" -DisableNameChecking -erroraction SilentlyContinue
 	
 # Get SQL Version Number First, the Queries below need to look in other tables based on 2005 or later
 if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 

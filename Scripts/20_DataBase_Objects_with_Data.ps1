@@ -51,7 +51,7 @@ Param(
     [parameter(Position=2,mandatory=$false,ValueFromPipeline)]
     [ValidateLength(0,35)]
     [string]$mypass
-
+    
 )
 
 # Save Starting Folder
@@ -70,14 +70,14 @@ if ($SQLInstance.length -eq 0)
 # Parameter Check
 if ($SQLInstance.Length -eq 0) 
 {
-    Write-host -f yellow "Usage: ./20_DataBase_Objects.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
+    Write-host -f yellow "Usage: ./20_DataBase_Objects_with_Data.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
     exit
 }
 
 
 # Working
 Write-Output "Server $SQLInstance"
-
+#Import-Module "sqlps" -DisableNameChecking -erroraction SilentlyContinue
 
 # Server connection check
 $serverauth = "win"
@@ -240,7 +240,7 @@ $scripter.Options.WithDependencies		= $false
 
 $scripter.Options.XmlIndexes            = $true
 
-# Data 
+# Really!
 $scripter.Options.ScriptData            = $true
 
 # -----------------------

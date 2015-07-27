@@ -98,8 +98,8 @@ else
 
 set-location "$BaseFolder"
 
-
 & .\01_Server_Logins.ps1 $SQLInstance $myuser $mypass
+& .\01_Server_Credentials.ps1 $SQLInstance $myuser $mypass
 & .\01_Server_Roles.ps1 $SQLInstance $myuser $mypass
 & .\02_Linked_Servers.ps1 $SQLInstance $myuser $mypass
 & .\07_Service_Creds.ps1 $SQLInstance $myuser $mypass
