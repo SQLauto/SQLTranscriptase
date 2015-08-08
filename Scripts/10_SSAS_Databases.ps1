@@ -88,13 +88,15 @@ try
     }
 
     # Write Out
+    Write-Output "Scripting out SSAS Databases..."
     foreach ($db in $svr.Databases) 
     { 
-        write-Host "Scripting SSAS Database: " $db.Name 
-        $xw = new-object System.Xml.XmlTextWriter("$($fullfolderPath)10 - $($db.Name)_$($dateStamp).xmla", [System.Text.Encoding]::UTF8) 
+
+        $xw = new-object System.Xml.XmlTextWriter("$($fullfolderPath)10 - $($db.Name).xmla", [System.Text.Encoding]::UTF8) 
         $xw.Formatting = [System.Xml.Formatting]::Indented 
         [Microsoft.AnalysisServices.Scripter]::WriteCreate($xw,$svr,$db,$true,$true) 
         $xw.Close() 
+		$db.Name 
     } 
     $svr.Disconnect()
 }
@@ -105,6 +107,7 @@ catch
     exit
 }
 
+Write-Output ("Exported: {0} SSAS Databases" -f $svr.Databases.Count)
 # Return to Base
 set-location $BaseFolder
 

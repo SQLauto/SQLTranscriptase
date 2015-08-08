@@ -126,7 +126,7 @@ if(!(test-path -path $fullfolderPath))
 [System.Reflection.Assembly]::LoadWithPartialName("Microsoft.SqlServer.SMO") | out-null
 
 # Throws error looking for version 9.0 (2005), unless 2005 is loaded, then it works fine
-# Something to do with how the various libs register the verisons in the Registry
+# Something to do with how the various libs register the versions in the Registry
 # Yet there are 3 Ways to do this, while LoadwithPartial only has one syntax (and it seems to work everywhere)
 
 #Add-Type -AssemblyName “Microsoft.SqlServer.Smo”
@@ -218,6 +218,15 @@ $mystring =  "Is HADR: " +$srv.IsHadrEnabled
 $mystring| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
 
 # Insert CR/LF shortcuts
+$Mainboard = gwmi -ComputerName $server -q "select * from win32_computersystem" | select Manufacturer
+$Bios = gwmi -ComputerName $server -q "select * from win32_computersystem" | select Model
+
+$mystring =  "Mainboard: " + $Mainboard.Manufacturer
+$mystring| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
+
+$mystring =  "Model: " + $Bios.Model
+$mystring| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
+
 $mystring =  "`r`nSQL Builds for reference: http://sqlserverbuilds.blogspot.com/ "
 $mystring| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
 

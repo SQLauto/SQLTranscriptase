@@ -207,5 +207,6 @@ if(!(test-path -path $proxy_path))
 $pa = $srv.JobServer.ProxyAccounts
 CopyObjectsToFiles $pa $proxy_path
 
+Write-Output ("Exported: {0} Agent Proxies" -f $pa.count)
 # Return to Base
 set-location $BaseFolder

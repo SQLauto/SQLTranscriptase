@@ -26,6 +26,7 @@
 
 .LINK
     https://github.com/gwalkey
+	https://msdn.microsoft.com/en-us/library/dn449497(v=sql.120).aspx
 #>
 
 Param(
@@ -72,7 +73,7 @@ if ($mypass.Length -ge 1 -and $myuser.Length -ge 1)
         if($results -ne $null)
         {
             $myver = $results.Column1
-            Write-Host $myver
+            Write-Output $myver
             $serverauth="sql"
         }	
 	}
@@ -280,6 +281,7 @@ foreach ($MB in $sqlresults)
     $myoutputstring | out-file -FilePath $myoutputfile -append -encoding ascii -width 500
 }
 
+Write-Output ("Exported: {0} Managed Backup Jobs" -f $sqlresults.count)
 # finish
 set-location $BaseFolder
 

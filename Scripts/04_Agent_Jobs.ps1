@@ -36,7 +36,7 @@ Param(
 
 [string]$BaseFolder = (Get-Item -Path ".\" -Verbose).FullName
 
-#  Script Name
+# Script Name
 Write-Host  -f Yellow -b Black "04 - Agent Jobs"
 
 # assume localhost
@@ -127,9 +127,10 @@ if(!(test-path -path $fullfolderPath))
 	mkdir $fullfolderPath | Out-Null
 }
  
- # Write em out, with filename fixups
+ # Export with filename fixups
 if ($jobs -ne $null)
 {
+    Write-Output "Exporting Agent Jobs:"
     ForEach ( $job in $jobs )
     {
         $myjobname = $job.Name
@@ -142,9 +143,10 @@ if ($jobs -ne $null)
         
         $FileName = "$fullfolderPath\$myjobname.sql"
         $job.Script() | Out-File -filepath $FileName
+		$myjobname
     }
 
-    Write-Host "Exported" $Jobs.Count "Jobs"
+    Write-Output ("Exported: {0} Jobs" -f $jobs.count)
 }
 else
 {

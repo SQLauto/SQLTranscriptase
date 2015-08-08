@@ -65,6 +65,7 @@ if ($SQLInstance.Length -eq 0)
 Write-Output "Server $SQLInstance"
 
 
+
 # Preload SQL PS module
 import-module "sqlps" -DisableNameChecking -erroraction SilentlyContinue
 
@@ -105,6 +106,7 @@ $mySQL =
     ItemContentNoBOM AS
     (
       SELECT
+         ItemID,
          ParentID,
          Name,
          [Type],
@@ -120,6 +122,7 @@ $mySQL =
 
     --The outer query gets the content in its varbinary, varchar and xml representations...
     SELECT
+       ItemID,
        ParentID,
        Name,
        [Type],
@@ -137,19 +140,24 @@ SELECT [ItemId],[ParentID],[Path]
   where Parentid is not null and [Type] = 1  
 "
 
+# Load PS assemblies
+[reflection.assembly]::LoadWithPartialName("Microsoft.SqlServer.Smo") | Out-Null
 
+
+# init sql response arrays
 $Packages = @()
 $toplevelfolders = @()
+$skeds = @()
 
+# Connect correctly
+$serverauth = "win"
 if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
 {
-Write-Output "Using SQL Auth"
+	Write-Output "Using SQL Auth"
 
 	# First, see if the SSRS Database exists
 	$exists = $FALSE
 	
-    [reflection.assembly]::LoadWithPartialName("Microsoft.SqlServer.Smo") | Out-Null
-	   
 	# Get reference to database instance
 	$server = new-object ("Microsoft.SqlServer.Management.Smo.Server") $SQLInstance
     $server.ConnectionContext.LoginSecure = $false 
@@ -158,13 +166,6 @@ Write-Output "Using SQL Auth"
 
     if ( $null -ne $server.Databases["ReportServer"] ) { $exists = $true } else { $exists = $false }
 	
-    <#
-    foreach($db in $server.databases)
-	{  
-	    if ($db.name -eq "ReportServer") {$exists = $TRUE; break}
-	}
-	#>
-
 	if ($exists -eq $FALSE)
     {
         Write-Output "SSRS Database not found on $SQLInstance"
@@ -184,20 +185,13 @@ else
 	# See if the SSRS Database Exists
 	$exists = $FALSE
 
-    # we set this to null so that nothing is displayed
-	$null = [reflection.assembly]::LoadWithPartialName("Microsoft.SqlServer.Smo")
+
 	   
 	# Get reference to database instance
 	$server = new-object ("Microsoft.SqlServer.Management.Smo.Server") $SQLInstance
 	
     if ( $null -ne $server.Databases["ReportServer"] ) { $exists = $true } else { $exists = $false }   
-    <#
-	foreach($db in $server.databases)
-	{  
-	    if ($db.name -eq "ReportServer") {$exists = $TRUE; break}
-	}
-    #>
-	
+
 	if ($exists -eq $FALSE)
     {
         Write-Output "SSRS Catalog not found on $SQLInstance"
@@ -217,7 +211,7 @@ $fullfolderPath = "$BaseFolder\$sqlinstance\11 - SSRS"
 $fullfolderPathRDL = "$BaseFolder\$sqlinstance\11 - SSRS\RDL"
 $fullfolderPathSUB = "$BaseFolder\$sqlinstance\11 - SSRS\Timed Subscriptions"
 $fullfolderPathKey = "$BaseFolder\$sqlinstance\11 - SSRS\Encryption Key"
-$fullfolderPathSecurity = "$BaseFolder\$sqlinstance\11 - SSRS\Security"
+$fullfolderPathSecurity = "$BaseFolder\$sqlinstance\11 - SSRS\Folder Permissions"
 
 if(!(test-path -path $fullfolderPath))
 {
@@ -247,7 +241,7 @@ if(!(test-path -path $fullfolderPathSecurity))
 # --------
 # 1) RDL
 # --------
-Write-Host "Writing RDL.."
+Write-Output "Writing RDL.."
 
 # Create Folder Structure to mirror SSRS ReportServer Catalog while dumping RDL into the respective folders
 foreach ($tlfolder in $toplevelfolders)
@@ -268,6 +262,8 @@ foreach ($tlfolder in $toplevelfolders)
     {
         if ($pkg.ParentID -eq $myParentID)
         {
+            # Get My ITEMID
+            $myItemID = $pkg.ItemID
             # Report RDL
             if ($pkg.Type -eq 2)
             {    
@@ -299,22 +295,88 @@ foreach ($tlfolder in $toplevelfolders)
             # 6 - Model
             # 7 - 
             # 9 - 
+<#
+            # If Report using a Timed Subscription Schedule, Export it
+            $myRDLSked = 
+            "
+            select 
+	            c.ItemId,
+	            c.[path],
+	            c.[name],
+	            case 
+		            when RecurrenceType=6 then 'Monthly'
+		            when RecurrenceType=4 then 'Daily'
+		            when RecurrenceType=2 then 'Minute'
+		            when RecurrenceType=1 then 'Once'
+	            end as 'RecurrenceType',
+	            case when RecurrenceType=1 then CONVERT(date, s.Startdate) end as 'Date',
+	            CONVERT(VARCHAR(8), s.StartDate, 108) as 'Time_of_Day',
+	            coalesce(WeeksInterval,'') as 'Weeks_Interval',
+	            coalesce(MinutesInterval,'') as 'Minutes_Interval',
+	            case when s.[month] & 1 = 1 then 'X' else '' end as 'Jan',
+	            case when s.[month] & 2 = 2 then 'X' else '' end as 'Feb',
+	            case when s.[month] & 4 = 4 then 'X' else '' end as 'Mar',
+	            case when s.[month] & 8 = 8 then 'X' else '' end as 'Apr',
+	            case when s.[month] & 16 = 16 then 'X' else '' end as 'May',
+	            case when s.[month] & 32 = 32 then 'X' else '' end as 'Jun',
+	            case when s.[month] & 64 = 64 then 'X' else '' end as 'Jul',
+	            case when s.[month] & 128 = 128 then 'X' else '' end as 'Aug',
+	            case when s.[month] & 256 = 256 then 'X' else '' end as 'Sep',
+	            case when s.[month] & 512 = 512 then 'X' else '' end as 'Oct',
+	            case when s.[month] & 1024 = 1024 then 'X' else '' end as 'Nov',
+	            case when s.[month] & 2048 = 2048 then 'X' else '' end as 'Dec',
+	            coalesce(s.monthlyweek,'') as 'Weeks_of_Month',
+	            case when s.daysofweek & 1 = 1 then 'Sun' else '' end as 'Sun',
+	            case when s.daysofweek & 2 = 2 then 'Mon' else '' end as 'Mon',
+	            case when s.daysofweek & 4 = 4 then 'Tues' else '' end as 'Tue',
+	            case when s.daysofweek & 8 = 8 then 'Wed' else '' end as 'Wed',
+	            case when s.daysofweek & 16 = 16 then 'Thu' else '' end as 'Thu',
+	            case when s.daysofweek & 32 = 32 then 'Fri' else '' end as 'Fri',
+	            case when s.daysofweek & 64 = 64 then 'Sat' else '' end as 'Sat'
+            FROM 
+	            [ReportServer].[dbo].[Schedule] s
+            inner join 
+	            [ReportServer].[dbo].[ReportSchedule] I
+            on 
+	            s.ScheduleID = I.ScheduleID
+            inner join [ReportServer].[dbo].[Catalog] c
+            on 
+	            I.reportID = C.ItemID
+            WHERE
+	             c.ItemID = '" + $myItemID + "'
 
+            "
+
+            #Write-Host $myRDLSked
+            if ($serverauth -eq "win")
+            {
+                $Skeds =  Invoke-Sqlcmd -MaxCharLength 10000000 -ServerInstance $SQLInstance -Query $myRDLSked
+            }
+            else
+            {
+                $Skeds =  Invoke-Sqlcmd -MaxCharLength 10000000 -ServerInstance $SQLInstance -Username $myuser -Password $mypass -Query $myRDLSked
+            }
+
+            if ($Skeds.Count -gt 0)
+            {
+                # Post CSS file
+                if(!(test-path -path "$myNewStruct\HTMLReport.css"))
+                {
+                    $myCSS | out-file "$myNewStruct\HTMLReport.css" -Encoding ascii    
+                }
+                # Export Sked
+                $Skeds | select ItemID, Path, Name, RecurrenceType, Date, Time_of_Day, Weeks_Interval, Minutes_Interval, `
+                Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, Weeks_of_Month,Sun, Mon, Tue, Wed, Thu, Fri, Sat | ConvertTo-Html  -CSSUri "HtmlReport.css"| Set-Content "$myNewStruct\$pkgName.html"
+            }
+
+
+            #>
         }
     }
 
 
 }
 
-<#
-Foreach ($pkg in $Packages)
-{
-    $pkgName = $Pkg.name
-   
-    $pkg.ContentXML | Out-File -Force -encoding ascii -FilePath "$fullfolderPathRDL\Reports\$pkgName.rdl"
-}
-
-#>
 
 
 # ------------------------
@@ -416,7 +478,7 @@ copy-item "\\$sqlinstance\c$\Program Files\Microsoft SQL Server\MSRS12.MSSQLSERV
 # 4) Database Encryption Key
 # -----------------------
 Write-Output "Backing up SSRS Encryption Key..."
-Write-Output "WMI found SSRS version "$wmi1
+Write-Output ("WMI found SSRS version {0}" -f $wmi1)
 
 if ($wmi1 -eq 10)
 {
@@ -531,7 +593,7 @@ catch
 $ErrorActionPreference = $old_ErrorActionPreference 
 
 # --------------------
-# 6) Report Security
+# 6) Report Permissions
 # --------------------
 # http://stackoverflow.com/questions/6600480/ssrs-determine-report-permissions-via-reportserver-database-tables
 #

@@ -84,14 +84,8 @@ if ($mypass.Length -ge 1 -and $myuser.Length -ge 1)
         $unc = 1
     }
 
-    # Look for the Catalog on this server
+    # Look for the 2012+ SSIS Catalog on this server
     if ( $null -ne $server.Databases["SSISDB"] ) { $exists = $true } else { $exists = $false }
-    <#
-	foreach($db in $server.databases)
-	{  
-	    if ($db.name -eq "SSISDB") {$exists = $TRUE}
-	}
-    #>
 	
 	if ($exists -eq $FALSE)
     {
@@ -141,12 +135,6 @@ else
    
     # Only if the Catalog is found    
     if ( $null -ne $server.Databases["SSISDB"] ) { $exists = $true } else { $exists = $false }
-    <#
-	foreach($db in $server.databases)
-	{  
-	    if ($db.name -eq "SSISDB") {$exists = $TRUE}
-	}
-	#>
 
 	if ($exists -eq $FALSE)
     {
@@ -209,13 +197,11 @@ $myquery += " encryption by password = 'Brf7d5XtWc5gJiTBU8uW'"
 
 if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
 {
-	#Write-host "Using SQL Auth"
     set-location $fullfolderPath
     $keyresult = Invoke-Sqlcmd -MaxCharLength 10000000 -ServerInstance $SQLInstance -Query $myquery -Username $myuser -Password $mypass 
 }
 else
 {
-	#Write-host "Using Windows Auth"
     set-location $fullfolderPath
     $keyresult = Invoke-Sqlcmd -MaxCharLength 10000000 -ServerInstance $SQLInstance -Query $myquery
 }
@@ -260,6 +246,8 @@ $myrestorecmd = "Restore master key from file = 'SSISDB_Master_Key.txt' `
 
 Write-Output "Writing out Master Key Restore Command..."
 $myrestorecmd | out-file $fullfolderPath\Master_Key_Restore_cmd.sql -Encoding ascii
+
+Write-Output ("Exported: {0} Packages" -f $Folders.count)
 
 # Return to Base
 set-location $BaseFolder

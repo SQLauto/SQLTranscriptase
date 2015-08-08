@@ -111,13 +111,13 @@ else
 	}
 }
 
-if (!($myver -like "11.0*") -and !($myver -like "12.0*"))
+if (!($myver -like "11.0*") -and !($myver -like "12.0*") -and !($myver -like "13.0*"))
 {
     Write-Output "Supports Extended Events only on SQL Server 2012 or higher"
     exit
 }
 
-#  Any to DO?
+#  Anything to do?
 $sqlES = 
 " 
 select [event_session_id],[name] from sys.server_event_sessions
@@ -212,7 +212,7 @@ $XEStore = New-Object Microsoft.SqlServer.Management.XEvent.XEStore $Server
 
 foreach($XESession in $XEStore.Sessions)
 {    
-    Write-Host "Scripting out ["$XESession.Name"]"
+    Write-Output ("Scripting out {0}" -f $XESession.Name)
 
     $output_path = $fullfolderPath+"\"+$XESession.name+".sql"    
     

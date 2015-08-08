@@ -56,7 +56,7 @@ if ($SQLInstance.Length -eq 0)
 }
 
 # Working
-Write-host "Server $SQLInstance"
+Write-Output "Server $SQLInstance"
 
 # Server connection check
 $serverauth = "win"
@@ -209,11 +209,11 @@ if(!(test-path -path $output_path))
     }
 
 #Export Logins
-[string[]]$bogus_logins = '##MS_PolicyEventProcessingLogin##', '##MS_PolicyTsqlExecutionLogin##', '##MS_SQLEnableSystemAssemblyLoadingUser##',`
-'##MS_SSISServerCleanupJobLogin##'
+[string[]]$bogus_logins = '##MS_PolicyEventProcessingLogin##', '##MS_PolicyTsqlExecutionLogin##', '##MS_SQLEnableSystemAssemblyLoadingUser##', '##MS_SSISServerCleanupJobLogin##'
 
 $logins_path  = "$BaseFolder\$SQLInstance\01 - Server Logins\"
-#$logins = $srv.Logins | Where-Object -FilterScript {$_.Name -notin $bogus_logins} # Ignore special SQL Logins
+# Ignore special SQL Logins
+#$logins = $srv.Logins | Where-Object -FilterScript {$_.Name -notin $bogus_logins}
 $logins = $srv.Logins
 CopyObjectsToFiles $logins $logins_path
  

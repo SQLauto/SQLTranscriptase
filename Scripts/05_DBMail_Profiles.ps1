@@ -3,7 +3,7 @@
     Gets the SQL Agent Database Mail Profiles
 	
 .DESCRIPTION
-    Writes the SQL Agent Database Mail Profiles out to DBMail_Profiles.sql
+    Writes the SQL Agent Database Mail Profiles out to DBMail_Accounts.sql
 	
 .EXAMPLE
     05_DBMail_Profiles.ps1 localhost
@@ -23,6 +23,7 @@
 	
 .LINK
     https://github.com/gwalkey
+	
 	
 #>
 
@@ -100,7 +101,6 @@ else
 
 }
 
-Import-Module “sqlps” -DisableNameChecking -erroraction SilentlyContinue
 
 # Load SQL SMO Assembly
 [System.Reflection.Assembly]::LoadWithPartialName("Microsoft.SqlServer.SMO") | out-null
@@ -121,30 +121,33 @@ else
     $srv.ConnectionContext.set_Password($mypass)
 }
 
-# Error trapping off for webserviceproxy calls
-$old_ErrorActionPreference = $ErrorActionPreference
-$ErrorActionPreference = 'SilentlyContinue'
+# Get Database Mail configuration objects
+$ProfileCount = $srv.Mail.Profiles.Count
 
-$DBMailProfiles = $srv.Mail.Script();
-
-# Reset default PS error handler - for WMI error trapping
-$ErrorActionPreference = $old_ErrorActionPreference 
-
-set-location $BaseFolder
-
-# Export
-if ($DBMailProfiles -ne $null)
+# Export Them
+if ($ProfileCount -gt 0)
 {
-    
+    $DBMProfiles = $srv.Mail.Profiles
+
     # Create output folder
+
     $fullfolderPath = "$BaseFolder\$sqlinstance\05 - DBMail Profiles"
     if(!(test-path -path $fullfolderPath))
     {
     	mkdir $fullfolderPath | Out-Null
     }
 
-    $DBMailProfiles | out-file "$fullfolderPath\DBMail_Profiles.sql" -Encoding ascii -Append
-	
+    # Create Output File
+    New-Item "$fullfolderPath\DBMail_Profiles.sql" -type file -force  |Out-Null
+    
+    # Row Process
+    Foreach ($row in $DBMProfiles)
+    {
+        $ProfileScript = $row.Script()
+        $ProfileScript | out-file "$fullfolderPath\DBMail_Profiles.sql" -Encoding ascii -Append
+    }
+    
+    Write-Output ("Exported: {0} DBMail Profiles" -f $DBMProfiles.count)
 }
 else
 {
@@ -153,5 +156,7 @@ else
     Set-Location $BaseFolder    
 }
 
-# Return to Base
 set-location $BaseFolder
+
+
+

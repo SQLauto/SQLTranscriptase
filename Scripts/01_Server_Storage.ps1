@@ -104,7 +104,7 @@ $WinServer = ($SQLInstance -split {$_ -eq "," -or $_ -eq "\"})[0]
 
 # Credit: https://sqlscope.wordpress.com/2012/05/05/
 $VolumeTotalGB = @{Name="VolumeTotalGB";Expression={[Math]::Round(($_.Capacity/1GB),2)}}
-$VolumeUsedGB = @{Name="VolumeUsedGB";Expression={[Math]::Round((($_.Capacity - $_.FreeSpace)/1GB),2)}}
+$VolumeUsedGB =  @{Name="VolumeUsedGB";Expression={[Math]::Round((($_.Capacity - $_.FreeSpace)/1GB),2)}}
 $VolumeFreeGB =  @{Name="VolumeFreeGB";Expression={[Math]::Round(($_.FreeSpace/1GB),2)}}
 
 # Let WMI errors be trapped
@@ -198,8 +198,8 @@ td
 
 $myCSS | out-file "$fullfolderPath\HTMLReport.css" -Encoding ascii
 
+# Export
 $mySettings = $VolumeArray
-
 $mySettings | select Name, Label, FileSystem, DriveType, $VolumeTotalGB, $VolumeUsedGB, $VolumeFreeGB, BootVolume, DriveLetter, BlockSize  | ConvertTo-Html  -CSSUri "HtmlReport.css"| Set-Content "$fullfolderPath\HtmlReport.html"
 
 # Return to Base

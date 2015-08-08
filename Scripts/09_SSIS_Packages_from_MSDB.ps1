@@ -57,6 +57,7 @@ if ($SQLInstance.Length -eq 0)
 # Working
 Write-Output "Server $SQLInstance"
 
+import-module "sqlps" -DisableNameChecking -erroraction SilentlyContinue
 	
 # Get SQL Version Number First, the Queries below need to look in other tables based on 2005 or later
 if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
@@ -296,7 +297,9 @@ else
             mkdir $fullfolderPath | Out-Null
         }
         $pkg.pkg | Out-File -Force -encoding ascii -FilePath "$fullfolderPath\$pkgName.dtsx"
+		$Pkg.packagename
     }
+    Write-Output ("Exported: {0} SSIS MSDB Packages" -f $packages.count)
 }
 
 # Return to Base

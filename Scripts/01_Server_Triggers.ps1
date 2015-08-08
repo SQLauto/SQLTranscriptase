@@ -107,7 +107,7 @@ $sql =
 "
 SELECT
 ssmod.definition AS [Definition],
-'ENABLE TRIGGER  ' + name +' ON ALL SERVER' as enablecmd
+'ENABLE TRIGGER ' + name +' ON ALL SERVER' as enablecmd
 FROM
 master.sys.server_triggers AS tr
 LEFT OUTER JOIN master.sys.server_assembly_modules AS mod ON mod.object_id = tr.object_id
@@ -177,10 +177,11 @@ else
         mkdir $fullfolderPath | Out-Null
     }
 
+	# Export
 	Foreach ($row in $results)
     {
-        $row.Definition,$row.enableCMD | out-file "$fullfolderPath\Server_Triggers.sql" -Encoding ascii -Append
-		Add-Content -Value "`r`n" -Path "$fullfolderPath\Server_Triggers.sql" -Encoding Ascii
+        $row.Definition+"`r`nGO`r`n`r`n",$row.enableCMD+"`r`nGO`r`n" | out-file "$fullfolderPath\Server_Triggers.sql" -Encoding ascii -Append
+		#Add-Content -Value "`r`n" -Path "$fullfolderPath\Server_Triggers.sql" -Encoding Ascii
     }
 	    
 }

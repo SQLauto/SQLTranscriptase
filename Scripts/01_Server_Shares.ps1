@@ -56,7 +56,7 @@ if ($SQLInstance.Length -eq 0)
 }
 
 
-# Im Working Here...
+# Working
 Write-Output "Server $SQLInstance"
 
 # Need a string array to hold the Shares Objects from WMI
@@ -126,14 +126,14 @@ else
 # Do WMI Call
 try
 {
-    $ShareArray = Get-WmiObject -Computer $WinServer -class Win32_Share | select name, path, description | Where-Object -filterscript {$_.Name -ne "ADMIN$" -and $_.Name -ne "IPC$"} | sort-object name
+    $ShareArray = Get-WmiObject -Computer $WinServer -class Win32_Share | select Name, Path, Description | Where-Object -filterscript {$_.Name -ne "ADMIN$" -and $_.Name -ne "IPC$"} | sort-object name
     #$ShareArray | Out-GridView
 	
 	# Check "Automatic Variable"
 	# https://technet.microsoft.com/en-us/library/hh847768.aspx
     if ($?)
     {
-        Write-Output "WMI Connected OK"
+        Write-Output "Good WMI Connection"
     }
     else
     {
@@ -180,7 +180,7 @@ if(!(test-path -path $fullfolderPath))
 }
 
 
-# Create some CSS to help my HTML in rollover highlighting
+# Create some CSS to help my HTML with rollover highlighting
 $myCSS = 
 "
 table

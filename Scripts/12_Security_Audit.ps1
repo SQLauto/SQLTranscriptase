@@ -3,7 +3,7 @@
     Gets SQL Server Security Information from the target server
 	
 .DESCRIPTION
-   Writes out the results of 5 other scripts to a sub folder of the Server Name
+   Writes out the results of 5 SQL Queries to a sub folder of the Server Name
    One HTML file for each Query
    
 .EXAMPLE
@@ -19,10 +19,11 @@
 	HTML Files
 	
 .NOTES
-    PF
+    George Walkey
+	Richmond, VA
 
 .LINK
-    http://d0wiki
+    https://github.com/gwalkey
 	
 #>
 
@@ -238,6 +239,7 @@ set-location $BaseFolder
 # -----------------------
 # iterate over each DB
 # -----------------------
+Write-Output "Database Objects..."
 foreach($sqlDatabase in $srv.databases) 
 {
     # Skip Certain System Databases
@@ -254,7 +256,9 @@ foreach($sqlDatabase in $srv.databases)
         mkdir $output_path | Out-Null	
     }
 
+	$sqlDatabase.Name
     # Run Query 2
+	# 2) Login_to_User_Mappings
     $sql2 = "
     Use ["+ $sqlDatabase.Name + "];"+
     "
@@ -290,12 +294,13 @@ foreach($sqlDatabase in $srv.databases)
     set-location $BaseFolder
 
     # Run Query 3
+	# 3) Roles per User
     $sql3 = "
     Use ["+ $sqlDatabase.Name + "];"+
     "
     SELECT 
-	    b.name AS Role_name, 
-	    a.name AS User_name 
+		a.name AS User_name,
+	    b.name AS Role_name	    
     FROM 
     sysusers a 
     INNER JOIN sysmembers c 
@@ -319,11 +324,12 @@ foreach($sqlDatabase in $srv.databases)
     }
 
     # Write out rows    
-    $results3 | select Role_Name, User_Name | ConvertTo-Html  -CSSUri "HtmlReport.css"| Set-Content "$output_path\3_Roles_Per_User.html"
+    $results3 | select User_Name, Role_Name | ConvertTo-Html  -CSSUri "HtmlReport.css"| Set-Content "$output_path\3_Roles_Per_User.html"
 
     set-location $BaseFolder
 
     # Run Query 4
+	# 4) Databse-Level Permissions
     $sql4 = "
     Use ["+ $sqlDatabase.Name + "];"+
     "
@@ -361,6 +367,7 @@ foreach($sqlDatabase in $srv.databases)
     set-location $BaseFolder
 
     # Run Query 5
+	# 5) Individual Database-Level Object Permissions
     $sql5 = "
     Use ["+ $sqlDatabase.Name + "];"+
     "

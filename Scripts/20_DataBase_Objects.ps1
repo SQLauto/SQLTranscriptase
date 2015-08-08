@@ -32,7 +32,7 @@
     ServerName, [SQLUser], [SQLPassword]
 
 .Outputs
-    Lots of Yummy Files(YFs) to check in
+
 	
 .LINK
     https://github.com/gwalkey
@@ -109,7 +109,7 @@ else
     if($results -ne $null)
     {
         $myver = $results.Column1
-        #Write-Output $myver
+        Write-Output $myver
     }
 	}
 	catch
@@ -149,7 +149,7 @@ function CopyObjectsToFiles($objects, $outDir) {
             }
             catch
             {
-                $msg = "Cannot script-out element:"+$o
+                $msg = "Cannot script this element:"+$o
                 Write-output $msg
             }
 		}
@@ -241,7 +241,7 @@ $scripter.Options.WithDependencies		= $false
 $scripter.Options.XmlIndexes            = $true
 
 # Data 
-$scripter.Options.ScriptData            = $true
+$scripter.Options.ScriptData            = $false
 
 # -----------------------
 # iterate over each DB
@@ -252,7 +252,7 @@ foreach($sqlDatabase in $srv.databases)
     # Skip System Databases
     if ($sqlDatabase.Name -in 'Master','Model','MSDB','TempDB','SSISDB') {continue}
 
-    # Skip Offline Databases (SMO still enumerated them, but you cant retrieve the objects)
+    # Skip Offline Databases (SMO still enumerates them, but you cant retrieve the objects)
     if ($sqlDatabase.Status -ne 'Normal') {continue}
 
     # Prep Database for output

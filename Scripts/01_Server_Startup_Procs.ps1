@@ -90,7 +90,7 @@ else
     if($results -ne $null)
     {
         $myver = $results.Column1
-        Write-Host $myver
+        Write-Output $myver
     }
 	}
 	catch
@@ -148,6 +148,7 @@ else
 }
 
 $db 	= New-Object ("Microsoft.SqlServer.Management.SMO.Database")
+
 
 # Set scripter options to ensure only data is scripted
 $scripter.Options.ScriptSchema 	= $true;

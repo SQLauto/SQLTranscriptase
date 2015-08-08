@@ -162,7 +162,7 @@ if ($mypass.Length -ge 1 -and $myuser.Length -ge 1)
 }
 else
 {
-	Write-host "Using Windows Auth"
+	Write-Output "Using Windows Auth"
 
     $srv        = New-Object "Microsoft.SqlServer.Management.SMO.Server" $server
     $scripter 	= New-Object ("Microsoft.SqlServer.Management.SMO.Scripter") ($server)

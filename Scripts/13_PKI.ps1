@@ -178,7 +178,7 @@ set-location $BaseFolder
 if ($SQLInstance.IndexOf('\') -gt 0)
 {
     $SQLInstance2 = $SQLInstance.Substring(0,$sqlinstance.IndexOf('\'))
-    Write-Host "Using $SQLInstance2"
+    Write-Output "Using $SQLInstance2"
 }
 else
 {

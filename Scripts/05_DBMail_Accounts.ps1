@@ -180,6 +180,7 @@ if ($mypass.Length -ge 1 -and $myuser.Length -ge 1)
         $row.column1 | out-file "$fullfolderPath\DBMail_Accounts.sql" -Encoding ascii -Append
 		Add-Content -Value "`r`n" -Path "$fullfolderPath\DBMail_Accounts.sql" -Encoding Ascii
     }
+    Write-Output ("Exported: {0} DBMail Accounts" -f $results.count)
 }
 else
 {
@@ -207,6 +208,7 @@ else
         $row.column1 | out-file "$fullfolderPath\DBMail_Accounts.sql" -Encoding ascii -Append
 		Add-Content -Value "`r`n" -Path "$fullfolderPath\DBMail_Accounts.sql" -Encoding Ascii
     }
+    Write-Output ("Exported: {0} DBMail Accounts" -f $results.count)
 }
 
 # Return to Base

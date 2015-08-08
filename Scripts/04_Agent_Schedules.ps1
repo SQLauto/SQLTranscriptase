@@ -144,8 +144,10 @@ if ($mypass.Length -ge 1 -and $myuser.Length -ge 1)
     # Reset default PS error handler
     $ErrorActionPreference = $old_ErrorActionPreference 
     
+    # Export
     New-Item "$fullfolderPath\Agent_Schedules.sql" -type file -force |Out-Null
     $Outdata| Select column1 -ExpandProperty column1 | out-file "$fullfolderPath\Agent_Schedules.sql" -Encoding ascii -Append -Width 10000
+	Write-Output ("Exported: {0} Agent Schedules" -f $outdata.count)
     
 }
 else
@@ -169,6 +171,7 @@ else
     
     New-Item "$fullfolderPath\Agent_Schedules.sql" -type file -force |Out-Null
     $Outdata| Select column1 -ExpandProperty column1 | out-file "$fullfolderPath\Agent_Schedules.sql" -Encoding ascii -Append -Width 10000
+    Write-Output ("Exported: {0} Agent Schedules" -f $outdata.count)
     
 }
 

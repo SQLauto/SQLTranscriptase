@@ -54,7 +54,7 @@ if ($SQLInstance.length -eq 0)
 if ($SQLInstance.Length -eq 0) 
 {
     Write-host -f yellow -b black "Usage: ./01_Server_Roles.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
-       Set-Location $BaseFolder
+    Set-Location $BaseFolder
     exit
 }
 
@@ -106,26 +106,6 @@ else
 }
 
 
-# Load SQL SMO Assembly
-[System.Reflection.Assembly]::LoadWithPartialName("Microsoft.SqlServer.SMO") | out-null
-[System.Reflection.Assembly]::LoadWithPartialName('Microsoft.SqlServer.SMOExtended')  | out-null
-
-# Set Local Vars
-$server 	= $SQLInstance
-
-if ($serverauth -eq "win")
-{
-    $srv        = New-Object "Microsoft.SqlServer.Management.SMO.Server" $server
-    $scripter 	= New-Object ("Microsoft.SqlServer.Management.SMO.Scripter") ($server)
-}
-else
-{
-    $srv        = New-Object "Microsoft.SqlServer.Management.SMO.Server" $server
-    $srv.ConnectionContext.LoginSecure=$false
-    $srv.ConnectionContext.set_Login($myuser)
-    $srv.ConnectionContext.set_Password($mypass)    
-    $scripter   = New-Object ("Microsoft.SqlServer.Management.SMO.Scripter") ($srv)
-}
 
 # Create Output Folder
 $fullfolderPath = "$BaseFolder\$sqlinstance\01 - Server Roles"
@@ -159,6 +139,7 @@ with ServerPermsAndRoles as
 		'role membership' as security_type,
 		spr.name as security_entity,
 		sp.type_desc as principal_type,
+		sp.type,
         sp.name as principal_name,        
         null as state_desc
     from sys.server_principals sp
@@ -166,7 +147,7 @@ with ServerPermsAndRoles as
     on sp.principal_id = srm.member_principal_id
     inner join sys.server_principals spr
     on srm.role_principal_id = spr.principal_id
-    where sp.type in ('s','u','r')
+    where sp.type in ('s','u','r','g')
 )
 select 
     security_type,

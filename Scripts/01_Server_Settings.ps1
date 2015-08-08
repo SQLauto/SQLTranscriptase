@@ -54,7 +54,7 @@ if ($SQLInstance.length -eq 0)
 if ($SQLInstance.Length -eq 0) 
 {
     Write-host -f yellow "Usage: ./01_Server_Settings.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
-       Set-Location $BaseFolder
+    Set-Location $BaseFolder
     exit
 }
 
@@ -174,7 +174,7 @@ $myCSS | out-file "$output_path\HTMLReport.css" -Encoding ascii
 $mySettings = $srv.Configuration.Properties
 $mySettings | sort-object DisplayName | select Displayname, ConfigValue, runValue | ConvertTo-Html  -CSSUri "HtmlReport.css"| Set-Content "$output_path\HtmlReport.html"
 
-# Get Buffer Pool Extension
+# Get Buffer Pool Extensions
 
 $mySQLquery = "
 USE Master; select State, path, current_size_in_kb as sizeKB from sys.dm_os_buffer_pool_extension_configuration
@@ -190,6 +190,7 @@ else
     $sqlresults = Invoke-SqlCmd -ServerInstance $SQLInstance -Query $mySQLquery -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
 }
 
+# Export it
 if ($sqlresults.state -eq 5)
 {
     $strExport = "

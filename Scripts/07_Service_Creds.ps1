@@ -123,7 +123,7 @@ try
     $results1 = gwmi -class win32_service  -computer $SQLInstance2 -filter "name like 'MSSQLSERVER%' or name like 'MsDtsServer%' or name like 'MSSQLFDLauncher%'  or Name like 'MSSQLServerOLAPService%'  or Name like 'SQL Server Distributed Replay Client%'  or Name like 'SQL Server Distributed Replay Controller%'  or Name like 'SQLBrowser%'  or Name like 'SQLSERVERAGENT%'  or Name like 'SQLWriter%'  or Name like 'ReportServer%' or Name like 'SQLAgent%' or Name like 'MSSQL%'" 
     if ($?)
     {
-        Write-Output "WMI Connected"
+        Write-Output "Good WMI Connection"
     }
     else
     {
@@ -201,7 +201,8 @@ td
 $myCSS | out-file "$fullfolderPath\HTMLReport.css" -Encoding ascii
 
 $mySettings = $results1
-$mySettings | select Name, startName  | ConvertTo-Html  -CSSUri "HtmlReport.css"| Set-Content "$fullfolderPath\HtmlReport.html"
+$mySettings | select Name, StartName  | ConvertTo-Html  -CSSUri "HtmlReport.css"| Set-Content "$fullfolderPath\HtmlReport.html"
+Write-Output ("Exported: {0} NT Service Creds" -f $results1.count)
 
 # Return to Base
 set-location $BaseFolder

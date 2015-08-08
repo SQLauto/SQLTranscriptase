@@ -150,7 +150,7 @@ foreach($Audit in $srv.Audits)
     $strmyauditName = $SQLInstance+"_ServerAudit_"+$audit.name+".sql"
     $strmyaudit = $Audit.script()
     $output_path = "$BaseFolder\$SQLInstance\16 - Audits\$strmyAuditName"
-    Write-Host "Server Audit:"$audit.Name
+    Write-Output ("Server Audit: {0}" -f $audit.Name)
     $strmyaudit | out-file $output_path -Force -encoding ascii
 }
 
@@ -170,7 +170,7 @@ foreach($Audit in $srv.ServerAuditSpecifications)
     $strmyauditName = $SQLInstance+"_ServerAuditSpec_"+$audit.name+".sql"
     $strmyaudit = $Audit.script()
     $output_path = "$BaseFolder\$SQLInstance\16 - Audits\$strmyAuditName"
-    Write-Host "Server Audit Spec:"$audit.Name
+    Write-Output ("Server Audit Spec: {0}" -f $audit.Name)
     $strmyaudit | out-file $output_path -Force -encoding ascii
 
 }
@@ -195,7 +195,7 @@ foreach($sqlDatabase in $srv.databases)
     foreach($DBAudit in $db.DatabaseAuditSpecifications)
     {
         # Script out objects for each DB
-        $strmyauditName = $fixedDBName+"_DB_AuditSpec.sql"
+        $strmyauditName = $fixedDBName+"_DBAuditSpec.sql"
         $strmyaudit = $DBAudit.script()
         $output_path = $DB_Audit_output_path+"\"+$strmyAuditName
         if(!(test-path -path $DB_Audit_output_path))
@@ -203,7 +203,7 @@ foreach($sqlDatabase in $srv.databases)
                 mkdir $DB_Audit_output_path | Out-Null
             }
 
-        Write-Host "Database Audits for:"$fixedDBName
+        Write-Output ("Database Audits for: {0}" -f $fixedDBName)
         $strmyaudit | out-file $output_path -Force -encoding ascii
     }
 
