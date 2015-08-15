@@ -20,7 +20,7 @@
 
 
 .Inputs
-    ServerName, [SQLUser], [SQLPassword]
+    ServerName\Instance, [SQLUser], [SQLPassword]
 
 .Outputs
 
@@ -54,7 +54,7 @@ if ($SQLInstance.length -eq 0)
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
 {
-    Write-host -f yellow "Usage: ./10_SSAS_Databases.ps1 `"ServerName`" ([`"Username`"] [`"Password`"] if DMZ/SQL-Auth machine)"
+    Write-Host -f yellow "Usage: ./10_SSAS_Databases.ps1 `"ServerName`" ([`"Username`"] [`"Password`"] if DMZ/SQL-Auth machine)"
     Set-Location $BaseFolder
     exit
 }
@@ -70,8 +70,6 @@ Write-Output "Server $SQLInstance"
 $dateStamp = (get-Date).ToString("yyyyMMdd")
 
 ## connect to the server 
-
-
 try
 {
     $svr = new-Object Microsoft.AnalysisServices.Server 
@@ -108,6 +106,7 @@ catch
 }
 
 Write-Output ("Exported: {0} SSAS Databases" -f $svr.Databases.Count)
+
 # Return to Base
 set-location $BaseFolder
 

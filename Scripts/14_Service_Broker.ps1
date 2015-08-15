@@ -20,7 +20,7 @@
 
 
 .Inputs
-    ServerName, [SQLUser], [SQLPassword]
+    ServerName\Instance, [SQLUser], [SQLPassword]
 
 .Outputs
 
@@ -57,7 +57,7 @@ if ($SQLInstance.length -eq 0)
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
 {
-    Write-host -f yellow "Usage: ./14_Service_Broker.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
+    Write-Host -f yellow "Usage: ./14_Service_Broker.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
     Set-Location $BaseFolder
     exit
 }
@@ -140,6 +140,7 @@ function CopyObjectsToFiles($objects, $outDir) {
 
 # Set Local Vars
 $server = $SQLInstance
+[bool]$anyfound = $false
 
 if ($serverauth -eq "win")
 {

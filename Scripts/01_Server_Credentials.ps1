@@ -14,7 +14,7 @@
     01_Server_Credentials.ps1 server01 sa password
 
 .Inputs
-    ServerName, [SQLUser], [SQLPassword]
+    ServerName\Instance, [SQLUser], [SQLPassword]
 
 .Outputs
 
@@ -45,8 +45,6 @@ if ($SQLInstance.length -eq 0)
 	Write-Output "Assuming localhost"
 	$Sqlinstance = 'localhost'
 }
-
-
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
 {
@@ -121,7 +119,7 @@ else
     $srv.ConnectionContext.set_Password($mypass)
 }
 
-# Dump Server Credentials
+# Output folder
 Write-Output "$SQLInstance - Credentials"
 $Credentials_path  = "$BaseFolder\$SQLInstance\01 - Server Credentials\"
 if(!(test-path -path $Credentials_path))
@@ -164,6 +162,7 @@ foreach ($Cred in $sqlresults)
     $myoutputstring | out-file -FilePath $myoutputfile -append -encoding ascii -width 500
 }
 
+Write-Host ("{0} Credentials Exported"  -f $sqlresults.Count)
 
 # Return to Base
 set-location $BaseFolder

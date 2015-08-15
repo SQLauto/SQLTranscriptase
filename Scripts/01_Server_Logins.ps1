@@ -13,7 +13,7 @@
     01_Server_Logins.ps1 server01 sa password
 
 .Inputs
-    ServerName, [SQLUser], [SQLPassword]
+    ServerName\Instance, [SQLUser], [SQLPassword]
 
 .Outputs
 
@@ -50,7 +50,7 @@ if ($SQLInstance.length -eq 0)
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
 {
-    Write-host -f yellow "Usage: ./01_Server_Logins.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
+    Write-Host -f yellow "Usage: ./01_Server_Logins.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
     Set-Location $BaseFolder
     exit
 }
@@ -196,7 +196,7 @@ $scripter.Options.SchemaQualifyForeignKeysReferences = $true
 $scripter.Options.ToFileOnly 			= $true
 
 
-# With Dependencies create one huge file for all tables in the order needed to maintain RefIntegrity
+# With Dependencies creates one huge file for all tables in the order needed to maintain RefIntegrity
 $scripter.Options.WithDependencies		= $false
 $scripter.Options.XmlIndexes            = $true
 
@@ -208,12 +208,12 @@ if(!(test-path -path $output_path))
         mkdir $output_path | Out-Null
     }
 
-#Export Logins
+
+# Ignore special SQL Logins
 [string[]]$bogus_logins = '##MS_PolicyEventProcessingLogin##', '##MS_PolicyTsqlExecutionLogin##', '##MS_SQLEnableSystemAssemblyLoadingUser##', '##MS_SSISServerCleanupJobLogin##'
+#$logins = $srv.Logins | Where-Object -FilterScript {$_.Name -notin $bogus_logins}
 
 $logins_path  = "$BaseFolder\$SQLInstance\01 - Server Logins\"
-# Ignore special SQL Logins
-#$logins = $srv.Logins | Where-Object -FilterScript {$_.Name -notin $bogus_logins}
 $logins = $srv.Logins
 CopyObjectsToFiles $logins $logins_path
  

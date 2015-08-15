@@ -14,7 +14,7 @@
     02_Linked_Servers.ps1 server01 sa password
 
 .Inputs
-    ServerName, [SQLUser], [SQLPassword]
+    ServerName\Instance, [SQLUser], [SQLPassword]
 
 .Outputs
 
@@ -104,29 +104,6 @@ else
 	}
 }
 
-function CopyObjectsToFiles($objects, $outDir) {
-	
-	if (-not (Test-Path $outDir)) {
-		[System.IO.Directory]::CreateDirectory($outDir) | out-null
-	}
-	
-	foreach ($o in $objects) { 
-	
-		if ($o -ne $null) {
-			
-			$schemaPrefix = ""
-			
-			if ($o.Schema -ne $null -and $o.Schema -ne "") {
-				$schemaPrefix = $o.Schema + "."
-			}
-		
-			$fixedOName = $o.name.replace('\','_')			
-			$scripter.Options.FileName = $outDir + $schemaPrefix + $fixedOName + ".sql"			
-			$scripter.EnumScript($o)
-		}
-	}
-}
-
 
 # Create Output Folder
 $fullfolderPath = "$BaseFolder\$sqlinstance\02 - Linked Servers"
@@ -135,7 +112,7 @@ if(!(test-path -path $fullfolderPath))
     mkdir $fullfolderPath | Out-Null
 }
 
-# Delete pre-existing negative file
+# Delete pre-existing negative status file
 if(test-path -path "$BaseFolder\$SQLInstance\02 - No Linked Servers Found.txt")
 {
     Remove-Item "$BaseFolder\$SQLInstance\02 - No Linked Servers Found.txt"
@@ -144,7 +121,7 @@ if(test-path -path "$BaseFolder\$SQLInstance\02 - No Linked Servers Found.txt")
 $server = $SQLInstance
 $LinkedServers_path	= $fullfolderPath+"\Linked_Servers.sql"
 
-# Test for Username/Password needed to connect - else assume WinAuth passthrough
+# Connect Correctly
 if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
 {
 	Write-Output "Using Sql Auth"
@@ -155,9 +132,8 @@ if ($mypass.Length -ge 1 -and $myuser.Length -ge 1)
     $srv.ConnectionContext.set_Password($mypass)
     $scripter = New-Object ("Microsoft.SqlServer.Management.SMO.Scripter") ($srv)
 
-    # Script out
-    $LinkedServers = $srv.LinkedServers 
-    #CopyObjectsToFiles $LinkedServers $LinkedServers_path
+    # Script out 
+    $srv.LinkedServers | foreach {$_.Script()+ "GO"} | Out-File  $LinkedServers_path
 
 }
 else
@@ -168,10 +144,7 @@ else
     $scripter 	= New-Object ("Microsoft.SqlServer.Management.SMO.Scripter") ($server)
 
     # Script Out
-    $LinkedServers = $srv.LinkedServers 
-    #CopyObjectsToFiles $LinkedServers $LinkedServers_path
     $srv.LinkedServers | foreach {$_.Script()+ "GO"} | Out-File  $LinkedServers_path
-
 
 }
 

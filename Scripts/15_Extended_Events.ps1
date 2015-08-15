@@ -12,7 +12,7 @@
     15_Extended_Events.ps1 server01 sa password
 
 .Inputs
-    ServerName, [SQLUser], [SQLPassword]
+    ServerName\Instance, [SQLUser], [SQLPassword]
 
 .Outputs
     .sql files
@@ -60,7 +60,7 @@ if ($SQLInstance.length -eq 0)
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
 {
-    Write-host -f yellow "Usage: ./15_Extended_Events.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
+    Write-Host -f yellow "Usage: ./15_Extended_Events.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
     Set-Location $BaseFolder
     exit
 }
@@ -113,7 +113,7 @@ else
 
 if (!($myver -like "11.0*") -and !($myver -like "12.0*") -and !($myver -like "13.0*"))
 {
-    Write-Output "Supports Extended Events only on SQL Server 2012 or higher"
+    Write-Output "I only support Extended Events on SQL Server 2012 or higher"
     exit
 }
 
@@ -210,6 +210,7 @@ $Server = New-Object Microsoft.SqlServer.Management.Sdk.Sfc.SqlStoreConnection $
 # XE Sessions are stored in the XEStore Object
 $XEStore = New-Object Microsoft.SqlServer.Management.XEvent.XEStore $Server
 
+# Export the XE Sessions
 foreach($XESession in $XEStore.Sessions)
 {    
     Write-Output ("Scripting out {0}" -f $XESession.Name)

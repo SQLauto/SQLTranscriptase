@@ -1,9 +1,9 @@
 <#
 .SYNOPSIS
-    Runs all other Powershell ps1 scripts for the target server
+    Runs all Security-Related Powershell ps1 scripts for the target server
 	
 .DESCRIPTION
-    Runs all other Powershell ps1 scripts for the target server    
+    Runs all Security-Related Powershell ps1 scripts for the target server    
 	
 .EXAMPLE
     00_RunAllScriptsSecurityOnly.ps1 localhost
@@ -12,7 +12,7 @@
     00_RunAllScriptsSecurityOnly.ps1 server01 sa password
 
 .Inputs
-    ServerName, [SQLUser], [SQLPassword]
+    ServerName\Instance, [SQLUser], [SQLPassword]
 
 .Outputs
 
@@ -32,7 +32,7 @@ Param(
   [string]$mypass
 )
 
-# --- TIPS ---
+# --- TIP ---
 # Want to Register these or your own scripts as a Powershell Module?
 # Rename them from .ps1 to .psm1 and put them in one of the folders pointed to by
 # $env:PSModulePath (the Windows Environment path)
@@ -47,15 +47,15 @@ Import-Module "sqlps" -DisableNameChecking -erroraction SilentlyContinue
 # assume localhost
 if ($SQLInstance.length -eq 0)
 {
-	Write-Host "Assuming localhost"
-	$Sqlinstance = 'localhost'
+	Write-Output "Assuming localhost"
+	$SQLInstance = 'localhost'
 }
 
 
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
 {
-    Write-host -f yellow "Usage: ./00_RunAllScripts.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
+    Write-Host -f yellow "Usage: ./00_RunAllScripts.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
 	set-location "$BaseFolder"
     exit
 }
@@ -63,34 +63,38 @@ if ($SQLInstance.Length -eq 0)
 # Server connection check
 if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
 {
-	Write-host "$SQLInstance - Testing SQL Auth"
-	try{
-    $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -Username $myuser -Password $mypass -QueryTimeout 10 #-erroraction SilentlyContinue
-    if($results -ne $null)
+	Write-Output "$SQLInstance - Testing SQL Auth"
+	try
     {
-        $myver = $results.Column1
-        Write-Host $myver
-    }	
+        $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -Username $myuser -Password $mypass -QueryTimeout 10 #-erroraction SilentlyContinue
+        if($results -ne $null)
+        {
+            $myver = $results.Column1
+            Write-Output $myver
+        }	
 	}
-	catch{
+	catch
+    {
 		Write-Host -f red "$SQLInstance not installed/running or is offline - Try Windows Auth?"
 		exit
 	}
 }
 else
 {
-	Write-host "$SQLInstance - Testing Windows Auth"
- 	Try{
-    $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -QueryTimeout 10 -erroraction SilentlyContinue
-    if($results -ne $null)
+	Write-Output "$SQLInstance - Testing Windows Auth"
+ 	Try
     {
+        $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -QueryTimeout 10 -erroraction SilentlyContinue
+        if($results -ne $null)
+        {
         $myver = $results.Column1
-        Write-Host $myver
-    }
+        Write-Output $myver
+        }
 	}
-	catch {
-	Write-Host -f red "$SQLInstance not installed/running or is offline - Try SQL Auth?" 
-	exit
+	catch
+    {
+	    Write-Host -f red "$SQLInstance not installed/running or is offline - Try SQL Auth?" 
+	    exit
 	}
 
 }

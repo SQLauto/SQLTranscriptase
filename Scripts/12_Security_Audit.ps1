@@ -13,7 +13,7 @@
     SQLSecurityAudit.ps1 server01 sa password
 
 .Inputs
-    ServerName, [SQLUser], [SQLPassword]
+    ServerName\Instance, [SQLUser], [SQLPassword]
 
 .Outputs
 	HTML Files
@@ -53,7 +53,7 @@ if ($SQLInstance.length -eq 0)
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
 {
-    Write-host -f yellow -b black "Usage: ./12_Security_Audit.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
+    Write-Host -f yellow -b black "Usage: ./12_Security_Audit.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
     Set-Location $BaseFolder
     exit
 }
@@ -273,17 +273,15 @@ foreach($sqlDatabase in $srv.databases)
     	sp.name, 
     	dp.name;
     "
-    #Write-Host $sql2
+
 
     # Run SQL
     if ($serverauth -ne "win")
     {
-    	#Write-host "Using Sql Auth"
     	$results2 = Invoke-SqlCmd -query $sql2 -Server $SQLInstance –Username $myuser –Password $mypass 
     }
     else
     {
-    	#Write-host "Using Windows Auth"	
     	$results2 = Invoke-SqlCmd -query $sql2 -Server $SQLInstance      
     }
 
@@ -291,7 +289,7 @@ foreach($sqlDatabase in $srv.databases)
     $myCSS | out-file "$output_path\HTMLReport.css" -Encoding ascii
     $results2 | select Login, User | ConvertTo-Html  -CSSUri "HtmlReport.css"| Set-Content "$output_path\2_Login_to_User_Mapping.html"
 
-    set-location $BaseFolder
+    Set-Location $BaseFolder
 
     # Run Query 3
 	# 3) Roles per User
@@ -314,12 +312,10 @@ foreach($sqlDatabase in $srv.databases)
     
     if ($serverauth -ne "win") 
     {
-    	#Write-host "Using Sql Auth"
     	$results3 = Invoke-SqlCmd -query $sql3 -Server $SQLInstance –Username $myuser –Password $mypass 
     }
     else
     {
-    	#Write-host "Using Windows Auth"	
     	$results3 = Invoke-SqlCmd -query $sql3 -Server $SQLInstance      
     }
 
@@ -352,12 +348,10 @@ foreach($sqlDatabase in $srv.databases)
     
     if ($serverauth -ne "win") 
     {
-    	#Write-host "Using Sql Auth"
     	$results4 = Invoke-SqlCmd -query $sql4 -Server $SQLInstance –Username $myuser –Password $mypass 
     }
     else
     {
-    	#Write-host "Using Windows Auth"	
     	$results4 = Invoke-SqlCmd -query $sql4 -Server $SQLInstance      
     }
 
@@ -402,12 +396,10 @@ foreach($sqlDatabase in $srv.databases)
     
     if ($serverauth -ne "win") 
     {
-    	#Write-host "Using Sql Auth"
     	$results5 = Invoke-SqlCmd -query $sql5 -Server $SQLInstance –Username $myuser –Password $mypass
     }
     else
     {
-    	#Write-host "Using Windows Auth"	
     	$results5 = Invoke-SqlCmd -query $sql5 -Server $SQLInstance
     }
 

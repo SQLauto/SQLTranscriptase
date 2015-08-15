@@ -19,7 +19,7 @@
     Richmond, VA USA
 
 .Inputs
-    ServerName, [SQLUser], [SQLPassword]
+    ServerName\Instance, [SQLUser], [SQLPassword]
 
 .Outputs
 
@@ -282,6 +282,7 @@ foreach ($MB in $sqlresults)
 }
 
 Write-Output ("Exported: {0} Managed Backup Jobs" -f $sqlresults.count)
+
 # finish
 set-location $BaseFolder
 

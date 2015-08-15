@@ -13,7 +13,7 @@
     01_Server_Shares.ps1 server01 sa password
 
 .Inputs
-    ServerName, [SQLUser], [SQLPassword]
+    ServerName\Instance, [SQLUser], [SQLPassword]
 
 .Outputs
 	HTML Files
@@ -43,7 +43,7 @@ Write-Host  -f Yellow -b Black "01 - Server Shares"
 if ($SQLInstance.length -eq 0)
 {
 	Write-Output "Assuming localhost"
-	$Sqlinstance = 'localhost'
+	$SQLinstance = 'localhost'
 }
 
 
@@ -80,54 +80,10 @@ else
     exit
 }
 
-
-# Server connection check
-$serverauth = "win"
-if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
-{
-	Write-Output "Testing SQL Auth"
-	try
-    {
-        $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
-        if($results -ne $null)
-        {
-            $myver = $results.Column1
-            Write-Output $myver
-            $serverauth="sql"
-        }	
-	}
-	catch
-    {
-		Write-Host -f red "$SQLInstance appears offline - Try Windows Auth?"
-        Set-Location $BaseFolder
-		exit
-	}
-}
-else
-{
-	Write-Output "Testing Windows Auth"
- 	Try
-    {
-        $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -QueryTimeout 10 -erroraction SilentlyContinue
-        if($results -ne $null)
-        {
-            $myver = $results.Column1
-            Write-Output $myver
-        }
-	}
-	catch
-    {
-	    Write-Host -f red "$SQLInstance appears offline - Try SQL Auth?" 
-        Set-Location $BaseFolder
-	    exit
-	}
-}
-
 # Do WMI Call
 try
 {
     $ShareArray = Get-WmiObject -Computer $WinServer -class Win32_Share | select Name, Path, Description | Where-Object -filterscript {$_.Name -ne "ADMIN$" -and $_.Name -ne "IPC$"} | sort-object name
-    #$ShareArray | Out-GridView
 	
 	# Check "Automatic Variable"
 	# https://technet.microsoft.com/en-us/library/hh847768.aspx
@@ -138,7 +94,7 @@ try
     else
     {
 		#Warn User
-        Write-Host -b black -f red "Access Denied using WMI against target server"
+        Write-Host -b black -f red "WMI could not connect"
         
         $fullfolderpath = "$BaseFolder\$SQLInstance\"
         if(!(test-path -path $fullfolderPath))
@@ -155,7 +111,7 @@ try
 catch
 {
     #Warn User
-    Write-Host -b black -f red "Access Denied using WMI against target server"
+    Write-Host -b black -f red "WMI could not connect"
     
     $fullfolderpath = "$BaseFolder\$SQLInstance\"
     if(!(test-path -path $fullfolderPath))
@@ -212,16 +168,14 @@ td
         Padding: 1px 4px 1px 4px;
     }
 "
+
 # Create the CSS File
 $myCSS | out-file "$fullfolderPath\HTMLReport.css" -Encoding ascii
 
-# Use the pipeline to shape, select, format and redirect my Object output
-$mySettings = $ShareArray
 
-# Iterate Out
-$mySettings | select Name, Path, Description  | ConvertTo-Html  -CSSUri "HtmlReport.css"| Set-Content "$fullfolderPath\HtmlReport.html"
+# Iterate and Export
+$ShareArray | select Name, Path, Description  | ConvertTo-Html  -CSSUri "HtmlReport.css"| Set-Content "$fullfolderPath\HtmlReport.html"
 
-"Shares Scripted out.."
 
 # Return to base
 set-location "$BaseFolder"

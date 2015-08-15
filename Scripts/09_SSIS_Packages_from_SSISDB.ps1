@@ -1,6 +1,7 @@
 <#
 .SYNOPSIS
     Gets the SQL Server Integration Services Catalog objects on the target server
+    We use BCP to export binary data
 	
 .DESCRIPTION
    Writes the SSIS Packages out to the "09 - SSISDB" folder
@@ -12,7 +13,7 @@
     09_SSIS_Packages_from_SSISDB.ps1 server01 sa password
 
 .Inputs
-    ServerName, [SQLUser], [SQLPassword]
+    ServerName\Instance, [SQLUser], [SQLPassword]
 
 .Outputs
 
@@ -47,7 +48,7 @@ if ($SQLInstance.length -eq 0)
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
 {
-    Write-host -f yellow "Usage: ./09_SSIS_Packages_from_SSISDB.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
+    Write-Host -f yellow "Usage: ./09_SSIS_Packages_from_SSISDB.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
     Set-Location $BaseFolder
     exit
 }
@@ -67,8 +68,8 @@ if ($mypass.Length -ge 1 -and $myuser.Length -ge 1)
 	# See if the SSISDB Catalog Exists first
 	[bool]$exists = $FALSE
 
-    # we set this to null so that nothing is displayed
-	$null = [reflection.assembly]::LoadWithPartialName("Microsoft.SqlServer.Smo")
+    #  load SMO Assemblies
+	[reflection.assembly]::LoadWithPartialName("Microsoft.SqlServer.Smo") | Out-Null
 	   
 	# Get reference to database instance
 	$server = new-object ("Microsoft.SqlServer.Management.Smo.Server") $SQLInstance

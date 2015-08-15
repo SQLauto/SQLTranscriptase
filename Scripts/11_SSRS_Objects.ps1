@@ -18,7 +18,7 @@
 
 
 .Inputs
-    ServerName, [SQLUser], [SQLPassword]
+    ServerName\Instance, [SQLUser], [SQLPassword]
 
 .Outputs
 
@@ -29,6 +29,7 @@
 	
 .LINK
     https://github.com/gwalkey
+
 	
 #>
 
@@ -49,7 +50,7 @@ Write-Host  -f Yellow -b Black "11 - SSRS Objects"
 if ($SQLInstance.length -eq 0)
 {
 	Write-Output "Assuming localhost"
-	$Sqlinstance = 'localhost'
+	$SQLInstance = 'localhost'
 }
 
 # Usage Check
@@ -64,6 +65,38 @@ if ($SQLInstance.Length -eq 0)
 # Working
 Write-Output "Server $SQLInstance"
 
+# Create some CSS for help in column formatting during HTML exports
+$myCSS = 
+"
+table
+    {
+        Margin: 0px 0px 0px 4px;
+        Border: 1px solid rgb(190, 190, 190);
+        Font-Family: Tahoma;
+        Font-Size: 9pt;
+        Background-Color: rgb(252, 252, 252);
+    }
+tr:hover td
+    {
+        Background-Color: rgb(150, 150, 220);
+        Color: rgb(255, 255, 255);
+    }
+tr:nth-child(even)
+    {
+        Background-Color: rgb(242, 242, 242);
+    }
+th
+    {
+        Text-Align: Left;
+        Color: rgb(150, 150, 220);
+        Padding: 1px 4px 1px 4px;
+    }
+td
+    {
+        Vertical-Align: Top;
+        Padding: 1px 4px 1px 4px;
+    }
+"
 
 
 # Preload SQL PS module
@@ -140,11 +173,14 @@ SELECT [ItemId],[ParentID],[Path]
   where Parentid is not null and [Type] = 1  
 "
 
+
+
+
 # Load PS assemblies
 [reflection.assembly]::LoadWithPartialName("Microsoft.SqlServer.Smo") | Out-Null
 
 
-# init sql response arrays
+# initialize arrays
 $Packages = @()
 $toplevelfolders = @()
 $skeds = @()
@@ -153,7 +189,8 @@ $skeds = @()
 $serverauth = "win"
 if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
 {
-	Write-Output "Using SQL Auth"
+    Write-Output "Using SQL Auth"
+    $serverauth = "sql"
 
 	# First, see if the SSRS Database exists
 	$exists = $FALSE
@@ -165,7 +202,7 @@ if ($mypass.Length -ge 1 -and $myuser.Length -ge 1)
     $server.ConnectionContext.Password=$mypass
 
     if ( $null -ne $server.Databases["ReportServer"] ) { $exists = $true } else { $exists = $false }
-	
+
 	if ($exists -eq $FALSE)
     {
         Write-Output "SSRS Database not found on $SQLInstance"
@@ -184,14 +221,12 @@ else
 
 	# See if the SSRS Database Exists
 	$exists = $FALSE
-
-
 	   
 	# Get reference to database instance
 	$server = new-object ("Microsoft.SqlServer.Management.Smo.Server") $SQLInstance
 	
     if ( $null -ne $server.Databases["ReportServer"] ) { $exists = $true } else { $exists = $false }   
-
+	
 	if ($exists -eq $FALSE)
     {
         Write-Output "SSRS Catalog not found on $SQLInstance"
@@ -243,7 +278,7 @@ if(!(test-path -path $fullfolderPathSecurity))
 # --------
 Write-Output "Writing RDL.."
 
-# Create Folder Structure to mirror SSRS ReportServer Catalog while dumping RDL into the respective folders
+# Create Output Folder Structure to mirror the SSRS ReportServer Catalog and dump the RDL into the respective folders
 foreach ($tlfolder in $toplevelfolders)
 {
     # Only Script out the Items for this Folder
@@ -256,19 +291,21 @@ foreach ($tlfolder in $toplevelfolders)
         mkdir $myNewStruct | Out-Null
     }
 
-    # Only Script out the Items for this Folder
+    # Only Script out the Reports in this Folder
     $myParentID = $tlfolder.ItemID
     Foreach ($pkg in $Packages)
     {
         if ($pkg.ParentID -eq $myParentID)
         {
-            # Get My ITEMID
+
+            # Get the Report ID, Name
             $myItemID = $pkg.ItemID
+            $pkgName = $Pkg.name
+
             # Report RDL
             if ($pkg.Type -eq 2)
             {    
-                #Export
-                $pkgName = $Pkg.name
+                #Export                
                 $pkg.ContentXML | Out-File -Force -encoding ascii -FilePath "$myNewStruct\$pkgName.rdl"
             }
 
@@ -277,7 +314,6 @@ foreach ($tlfolder in $toplevelfolders)
             {    
 
                 # Export
-                $pkgName = $Pkg.name
                 $pkg.ContentXML | Out-File -Force -encoding ascii -FilePath "$myNewStruct\$pkgName.dsrc.txt"
             }
 
@@ -285,7 +321,6 @@ foreach ($tlfolder in $toplevelfolders)
             if ($pkg.Type -eq 8)
             {    
 
-                $pkgName = $Pkg.name
                 $pkg.ContentXML | Out-File -Force -encoding ascii -FilePath "$myNewStruct\$pkgName.shdset.txt"
             }
 
@@ -295,88 +330,14 @@ foreach ($tlfolder in $toplevelfolders)
             # 6 - Model
             # 7 - 
             # 9 - 
-<#
-            # If Report using a Timed Subscription Schedule, Export it
-            $myRDLSked = 
-            "
-            select 
-	            c.ItemId,
-	            c.[path],
-	            c.[name],
-	            case 
-		            when RecurrenceType=6 then 'Monthly'
-		            when RecurrenceType=4 then 'Daily'
-		            when RecurrenceType=2 then 'Minute'
-		            when RecurrenceType=1 then 'Once'
-	            end as 'RecurrenceType',
-	            case when RecurrenceType=1 then CONVERT(date, s.Startdate) end as 'Date',
-	            CONVERT(VARCHAR(8), s.StartDate, 108) as 'Time_of_Day',
-	            coalesce(WeeksInterval,'') as 'Weeks_Interval',
-	            coalesce(MinutesInterval,'') as 'Minutes_Interval',
-	            case when s.[month] & 1 = 1 then 'X' else '' end as 'Jan',
-	            case when s.[month] & 2 = 2 then 'X' else '' end as 'Feb',
-	            case when s.[month] & 4 = 4 then 'X' else '' end as 'Mar',
-	            case when s.[month] & 8 = 8 then 'X' else '' end as 'Apr',
-	            case when s.[month] & 16 = 16 then 'X' else '' end as 'May',
-	            case when s.[month] & 32 = 32 then 'X' else '' end as 'Jun',
-	            case when s.[month] & 64 = 64 then 'X' else '' end as 'Jul',
-	            case when s.[month] & 128 = 128 then 'X' else '' end as 'Aug',
-	            case when s.[month] & 256 = 256 then 'X' else '' end as 'Sep',
-	            case when s.[month] & 512 = 512 then 'X' else '' end as 'Oct',
-	            case when s.[month] & 1024 = 1024 then 'X' else '' end as 'Nov',
-	            case when s.[month] & 2048 = 2048 then 'X' else '' end as 'Dec',
-	            coalesce(s.monthlyweek,'') as 'Weeks_of_Month',
-	            case when s.daysofweek & 1 = 1 then 'Sun' else '' end as 'Sun',
-	            case when s.daysofweek & 2 = 2 then 'Mon' else '' end as 'Mon',
-	            case when s.daysofweek & 4 = 4 then 'Tues' else '' end as 'Tue',
-	            case when s.daysofweek & 8 = 8 then 'Wed' else '' end as 'Wed',
-	            case when s.daysofweek & 16 = 16 then 'Thu' else '' end as 'Thu',
-	            case when s.daysofweek & 32 = 32 then 'Fri' else '' end as 'Fri',
-	            case when s.daysofweek & 64 = 64 then 'Sat' else '' end as 'Sat'
-            FROM 
-	            [ReportServer].[dbo].[Schedule] s
-            inner join 
-	            [ReportServer].[dbo].[ReportSchedule] I
-            on 
-	            s.ScheduleID = I.ScheduleID
-            inner join [ReportServer].[dbo].[Catalog] c
-            on 
-	            I.reportID = C.ItemID
-            WHERE
-	             c.ItemID = '" + $myItemID + "'
 
-            "
+            
 
-            #Write-Host $myRDLSked
-            if ($serverauth -eq "win")
-            {
-                $Skeds =  Invoke-Sqlcmd -MaxCharLength 10000000 -ServerInstance $SQLInstance -Query $myRDLSked
-            }
-            else
-            {
-                $Skeds =  Invoke-Sqlcmd -MaxCharLength 10000000 -ServerInstance $SQLInstance -Username $myuser -Password $mypass -Query $myRDLSked
-            }
-
-            if ($Skeds.Count -gt 0)
-            {
-                # Post CSS file
-                if(!(test-path -path "$myNewStruct\HTMLReport.css"))
-                {
-                    $myCSS | out-file "$myNewStruct\HTMLReport.css" -Encoding ascii    
-                }
-                # Export Sked
-                $Skeds | select ItemID, Path, Name, RecurrenceType, Date, Time_of_Day, Weeks_Interval, Minutes_Interval, `
-                Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, Weeks_of_Month,Sun, Mon, Tue, Wed, Thu, Fri, Sat | ConvertTo-Html  -CSSUri "HtmlReport.css"| Set-Content "$myNewStruct\$pkgName.html"
-            }
-
-
-            #>
-        }
-    }
+        } # Parent
+    } # Items in this folder
 
 
 }
-
 
 
 # ------------------------
@@ -397,12 +358,12 @@ try
     }
     else
     {
-        #Write-Host "NOT v10"
+        #Write-Output "NOT v10"
     }
 }
 catch
 {
-    #Write-Host "NOT v10"
+    #Write-Output "NOT v10"
 }
 
 
@@ -418,12 +379,12 @@ if ($wmi1 -eq 0)
         }
         else
         {
-            #Write-Host "NOT v11"
+            #Write-Output "NOT v11"
         }
     }
     catch
     {
-        #Write-Host "NOT v11"
+        #Write-Output "NOT v11"
     }
 }
 
@@ -439,12 +400,12 @@ if ($wmi1 -eq 0)
         }
         else
         {
-            #Write-Host "NOT v12"
+            #Write-Output "NOT v12"
         }
     }
     catch
     {
-        #Write-Host "NOT v12"
+        #Write-Output "NOT v12"
     }
 }
 
@@ -477,7 +438,7 @@ copy-item "\\$sqlinstance\c$\Program Files\Microsoft SQL Server\MSRS12.MSSQLSERV
 # -----------------------
 # 4) Database Encryption Key
 # -----------------------
-Write-Output "Backing up SSRS Encryption Key..."
+Write-Output "Backup SSRS Encryption Key..."
 Write-Output ("WMI found SSRS version {0}" -f $wmi1)
 
 if ($wmi1 -eq 10)
@@ -553,47 +514,129 @@ $ErrorActionPreference = $old_ErrorActionPreference
 # ---------------------
 # 5) Timed Subscriptions
 # ---------------------
-Write-Output "Dumping Timed Subscriptions..."
+# If a Report uses a Timed Subscription Schedule, Export it
 
-# Need an array for this to work
-$rs2012 = @()
+$myRDLSked = 
+"
+select 
+	distinct s.ScheduleID as 'SchID',
+	c.ItemId as 'ReportID',
+	c.[path] as 'Folder',
+	c.[name] as 'Report',
+	s.state as 'State',
+	case 
+		when s.RecurrenceType=6 then 'Week of Month'
+		when s.RecurrenceType=5 then 'Monthly'
+		when s.RecurrenceType=4 then 'Daily'
+		when s.RecurrenceType=2 then 'Minute'
+		when s.RecurrenceType=1 then 'AdHoc'
+	end as 'RecurrenceType',
+	CONVERT(VARCHAR(8), s.StartDate, 108) as 'RunTime',
+	coalesce(s.WeeksInterval,'') as 'Weeks_Interval',
+	coalesce(s.MinutesInterval,'') as 'Minutes_Interval',
+	case when s.[month] & 1 = 1 then 'X' else '' end as 'Jan',
+	case when s.[month] & 2 = 2 then 'X' else '' end as 'Feb',
+	case when s.[month] & 4 = 4 then 'X' else '' end as 'Mar',
+	case when s.[month] & 8 = 8 then 'X' else '' end as 'Apr',
+	case when s.[month] & 16 = 16 then 'X' else '' end as 'May',
+	case when s.[month] & 32 = 32 then 'X' else '' end as 'Jun',
+	case when s.[month] & 64 = 64 then 'X' else '' end as 'Jul',
+	case when s.[month] & 128 = 128 then 'X' else '' end as 'Aug',
+	case when s.[month] & 256 = 256 then 'X' else '' end as 'Sep',
+	case when s.[month] & 512 = 512 then 'X' else '' end as 'Oct',
+	case when s.[month] & 1024 = 1024 then 'X' else '' end as 'Nov',
+	case when s.[month] & 2048 = 2048 then 'X' else '' end as 'Dec',
+	case s.MonthlyWeek
+		when 1 then 'First'
+		when 2 then 'Second'
+		when 3 then 'Third'
+		when 4 then 'Fourth'
+		when 5 then 'Last'
+	else ''
+	End AS 'Week_of_Month',
+	case when s.daysofweek & 1 = 1 then 'Sun' else '' end as 'Sun',
+	case when s.daysofweek & 2 = 2 then 'Mon' else '' end as 'Mon',
+	case when s.daysofweek & 4 = 4 then 'Tue' else '' end as 'Tue',
+	case when s.daysofweek & 8 = 8 then 'Wed' else '' end as 'Wed',
+	case when s.daysofweek & 16 = 16 then 'Thu' else '' end as 'Thu',
+	case when s.daysofweek & 32 = 32 then 'Fri' else '' end as 'Fri',
+	case when s.daysofweek & 64 = 64 then 'Sat' else '' end as 'Sat',
+	DATEPART(hh,s.StartDate) as 'RunHour',
+	case when DATEPART(hh,s.StartDate) =0 then 'X' else '' end as '00Z',
+	case when DATEPART(hh,s.StartDate) =1 then 'X' else '' end as '01Z',
+	case when DATEPART(hh,s.StartDate) =2 then 'X' else '' end as '02Z',
+	case when DATEPART(hh,s.StartDate) =3 then 'X' else '' end as '03Z',
+	case when DATEPART(hh,s.StartDate) =4 then 'X' else '' end as '04Z',
+	case when DATEPART(hh,s.StartDate) =5 then 'X' else '' end as '05Z',
+	case when DATEPART(hh,s.StartDate) =6 then 'X' else '' end as '06Z',
+	case when DATEPART(hh,s.StartDate) =7 then 'X' else '' end as '07Z',
+	case when DATEPART(hh,s.StartDate) =8 then 'X' else '' end as '08Z',
+	case when DATEPART(hh,s.StartDate) =9 then 'X' else '' end as '09Z',
+	case when DATEPART(hh,s.StartDate) =10 then 'X' else '' end as '10Z',
+	case when DATEPART(hh,s.StartDate) =11 then 'X' else '' end as '11Z',
+	case when DATEPART(hh,s.StartDate) =12 then 'X' else '' end as '12Z',
+	case when DATEPART(hh,s.StartDate) =13 then 'X' else '' end as '13Z',
+	case when DATEPART(hh,s.StartDate) =14 then 'X' else '' end as '14Z',
+	case when DATEPART(hh,s.StartDate) =15 then 'X' else '' end as '15Z',
+	case when DATEPART(hh,s.StartDate) =16 then 'X' else '' end as '16Z',
+	case when DATEPART(hh,s.StartDate) =17 then 'X' else '' end as '17Z',
+	case when DATEPART(hh,s.StartDate) =18 then 'X' else '' end as '18Z',
+	case when DATEPART(hh,s.StartDate) =19 then 'X' else '' end as '19Z',
+	case when DATEPART(hh,s.StartDate) =20 then 'X' else '' end as '20Z',
+	case when DATEPART(hh,s.StartDate) =21 then 'X' else '' end as '21Z',
+	case when DATEPART(hh,s.StartDate) =22 then 'X' else '' end as '22Z',
+	case when DATEPART(hh,s.StartDate) =23 then 'X' else '' end as '23Z'
 
-# Error trapping off for webserviceproxy calls
-$old_ErrorActionPreference = $ErrorActionPreference
-$ErrorActionPreference = 'SilentlyContinue'
+FROM 
+	[ReportServer].[dbo].[Schedule] S	            
+inner join 
+	[ReportServer].[dbo].[ReportSchedule]  I
+on 
+	S.ScheduleID = I.ScheduleID
 
-[int]$websvc1 = 0
-try
+inner join 
+	[ReportServer].[dbo].[Catalog] c
+on 
+	I.reportID = C.ItemID
+						
+order by DATEPART(hh,s.StartDate), 3, 4
+"
+
+if ($serverauth -eq "win")
 {
-    $rs2012 += New-WebServiceProxy -Uri "http://$SQLInstance/ReportServer/ReportService2010.asmx" -Namespace SSRS.ReportingService2010 -UseDefaultCredential
-    if ($?)
-    {
-        $websvc1 = 1
-        Write-Output "Found SSRS Webservice running...dumping Timed Subscriptions"
-
-        # WebService is up and running, dump out Subscriptions
-        $subscriptions += $rs2012.ListSubscriptions("/"); # use "/" for default native mode site        
-        foreach ($sub in $subscriptions)
-        {        
-            $myoutputfile = $sub.Report+".txt"
-            $sub | select Path,Report, Description, Owner, SubscriptionID, Status  | out-file -filepath $fullfolderPathSUB\$myoutputfile -Encoding ascii
-        }
-    }
-    else
-    {
-        Write-Output "SSRS Web Service was not running"
-    }
+    $Skeds =  Invoke-Sqlcmd -MaxCharLength 10000000 -ServerInstance $SQLInstance -Query $myRDLSked
 }
-catch
+else
 {
-    Write-Output "SSRS Web Service was not running"
+    $Skeds =  Invoke-Sqlcmd -MaxCharLength 10000000 -ServerInstance $SQLInstance -Username $myuser -Password $mypass -Query $myRDLSked
 }
 
-# Reset default PS error handler - for WMI error trapping
-$ErrorActionPreference = $old_ErrorActionPreference 
+
+# CSS file
+if(!(test-path -path "$fullfolderPathSUB\HTMLReport.css"))
+{
+    $myCSS | out-file "$fullfolderPathSUB\HTMLReport.css" -Encoding ascii    
+}
+
+
+Write-Output "Timed Subscriptions..."
+
+#Foreach ($Sked in $Skeds)
+#{
+    # OutPut FileName
+    $HTMLFileName = "$fullfolderPathSUB\Schedule.html"
+
+
+    $Skeds | select Folder, Report, State, RecurrenceType, RunTime, Weeks_Interval, Minutes_Interval, `
+    Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, `
+    Week_of_Month, Sun, Mon, Tue, Wed, Thu, Fri, Sat, RunHour,  `
+    00Z, 01Z, 02Z, 03Z, 04Z, 05Z, 06Z, 07Z, 08Z, 09Z, 10Z, 11Z, 12Z, 13Z, 14Z, 15Z, 16Z, 17Z, 18Z, 19Z, 20Z, 21Z, 22Z, 23Z `
+    | ConvertTo-Html  -CSSUri "HtmlReport.css"| Set-Content $HTMLFileName
+#}
+
 
 # --------------------
-# 6) Report Permissions
+# 6) Folder Permissions
 # --------------------
 # http://stackoverflow.com/questions/6600480/ssrs-determine-report-permissions-via-reportserver-database-tables
 #
@@ -640,38 +683,7 @@ else
 # Reset default PS error handler - for WMI error trapping
 $ErrorActionPreference = $old_ErrorActionPreference 
 
-# Create some CSS for help in column formatting
-$myCSS = 
-"
-table
-    {
-        Margin: 0px 0px 0px 4px;
-        Border: 1px solid rgb(190, 190, 190);
-        Font-Family: Tahoma;
-        Font-Size: 9pt;
-        Background-Color: rgb(252, 252, 252);
-    }
-tr:hover td
-    {
-        Background-Color: rgb(150, 150, 220);
-        Color: rgb(255, 255, 255);
-    }
-tr:nth-child(even)
-    {
-        Background-Color: rgb(242, 242, 242);
-    }
-th
-    {
-        Text-Align: Left;
-        Color: rgb(150, 150, 220);
-        Padding: 1px 4px 1px 4px;
-    }
-td
-    {
-        Vertical-Align: Top;
-        Padding: 1px 4px 1px 4px;
-    }
-"
+
 
 $myCSS | out-file "$fullfolderPathSecurity\HTMLReport.css" -Encoding ascii
 

@@ -19,7 +19,7 @@
     Richmond, VA USA
 
 .Inputs
-    ServerName, [SQLUser], [SQLPassword]
+    ServerName\Instance, [SQLUser], [SQLPassword]
 
 .Outputs
 
@@ -205,10 +205,10 @@ $scripter.Options.XmlIndexes            = $true
 
 Write-Output "Starting Export..."
 
-# Master DB Only
+# Use Master DB Only
 $sqlDatabase = $srv.Databases['Master']
 
-# Script out objects for each DB
+# Fixup bad characters in export filename
 $db = $sqlDatabase
 $fixedDBName = $db.name.replace('[','')
 $fixedDBName = $fixedDBName.replace(']','')

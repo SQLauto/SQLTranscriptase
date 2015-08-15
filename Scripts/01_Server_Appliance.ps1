@@ -1,6 +1,6 @@
 ﻿<#
 .SYNOPSIS
-    Gets the Hardware/Software config of the targeted SQL server
+    Gets the Hardware/Software Inventory of the target SQL server
 	
 .DESCRIPTION
     This script lists the Hardware and Software installed on the targeted SQL Server
@@ -13,7 +13,7 @@
     01_Server_Appliance.ps1 server01 sa password
 
 .Inputs
-    ServerName, [SQLUser], [SQLPassword]
+    ServerName\Instance, [SQLUser], [SQLPassword]
 
 .Outputs
 
@@ -54,7 +54,7 @@ Write-Host -f Yellow -b Black "01 - Server Appliance"
 if ($SQLInstance.length -eq 0)
 {
 	Write-Output "Assuming localhost"
-	$Sqlinstance = 'localhost'
+	$SQLInstance = 'localhost'
 }
 
 
@@ -126,7 +126,7 @@ if(!(test-path -path $fullfolderPath))
 [System.Reflection.Assembly]::LoadWithPartialName("Microsoft.SqlServer.SMO") | out-null
 
 # Throws error looking for version 9.0 (2005), unless 2005 is loaded, then it works fine
-# Something to do with how the various libs register the versions in the Registry
+# Something to do with how the various libs register the verisons in the Registry
 # Yet there are 3 Ways to do this, while LoadwithPartial only has one syntax (and it seems to work everywhere)
 
 #Add-Type -AssemblyName “Microsoft.SqlServer.Smo”
@@ -141,6 +141,9 @@ if(!(test-path -path $fullfolderPath))
 
 # 2014
 #Add-Type -path “C:\Windows\assembly\GAC_MSIL\Microsoft.SqlServer.Smo\12.0.0.0__89845dcd8080cc91\Microsoft.SqlServer.Smo.dll”
+
+# 2016
+#Add-Type -path “C:\Windows\assembly\GAC_MSIL\Microsoft.SqlServer.Smo\13.0.0.0__89845dcd8080cc91\Microsoft.SqlServer.Smo.dll”
 
 # Set Local Vars
 [string]$server = $SQLInstance
@@ -217,7 +220,7 @@ $mystring| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Appe
 $mystring =  "Is HADR: " +$srv.IsHadrEnabled
 $mystring| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
 
-# Insert CR/LF shortcuts
+# SMO works here for Mainboard and Model, but only SQL 2012+, that why Im using WMI
 $Mainboard = gwmi -ComputerName $server -q "select * from win32_computersystem" | select Manufacturer
 $Bios = gwmi -ComputerName $server -q "select * from win32_computersystem" | select Model
 

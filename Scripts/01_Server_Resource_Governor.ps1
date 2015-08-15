@@ -13,7 +13,7 @@
     01_Server_Resource_Governor.ps1 server01 sa password
 
 .Inputs
-    ServerName, [SQLUser], [SQLPassword]
+    ServerName\Instance, [SQLUser], [SQLPassword]
 
 .Outputs
 
@@ -45,13 +45,13 @@ Write-Host  -f Yellow -b Black "01 - Server Resource Governor"
 if ($SQLInstance.length -eq 0)
 {
 	Write-Output "Assuming localhost"
-	$Sqlinstance = 'localhost'
+	$SQLinstance = 'localhost'
 }
 
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
 {
-    Write-host -f yellow "Usage: ./01_Server_Resource_Governor.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
+    Write-Host -f yellow "Usage: ./01_Server_Resource_Governor.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
     Set-Location $BaseFolder
     exit
 }
@@ -196,7 +196,7 @@ $scripter.Options.SchemaQualifyForeignKeysReferences = $true
 $scripter.Options.ToFileOnly 			= $true
 
 
-# With Dependencies create one huge file for all tables in the order needed to maintain RefIntegrity
+# With Dependencies creates one huge file for all tables in the order needed to maintain RefIntegrity
 $scripter.Options.WithDependencies		= $false
 $scripter.Options.XmlIndexes            = $true
 

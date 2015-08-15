@@ -15,7 +15,7 @@
     01_Server_Settings.ps1 server01 sa password
 
 .Inputs
-    ServerName, [SQLUser], [SQLPassword]
+    ServerName\Instance, [SQLUser], [SQLPassword]
 
 .Outputs
 	HTML Files
@@ -53,7 +53,7 @@ if ($SQLInstance.length -eq 0)
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
 {
-    Write-host -f yellow "Usage: ./01_Server_Settings.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
+    Write-Host -f yellow "Usage: ./01_Server_Settings.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
     Set-Location $BaseFolder
     exit
 }
@@ -171,11 +171,11 @@ td
 
 $myCSS | out-file "$output_path\HTMLReport.css" -Encoding ascii
 
+# Export Server Settings
 $mySettings = $srv.Configuration.Properties
 $mySettings | sort-object DisplayName | select Displayname, ConfigValue, runValue | ConvertTo-Html  -CSSUri "HtmlReport.css"| Set-Content "$output_path\HtmlReport.html"
 
 # Get Buffer Pool Extensions
-
 $mySQLquery = "
 USE Master; select State, path, current_size_in_kb as sizeKB from sys.dm_os_buffer_pool_extension_configuration
 "
@@ -190,7 +190,7 @@ else
     $sqlresults = Invoke-SqlCmd -ServerInstance $SQLInstance -Query $mySQLquery -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
 }
 
-# Export it
+# Export it - State = 5 means BPE is enabled
 if ($sqlresults.state -eq 5)
 {
     $strExport = "
@@ -199,7 +199,7 @@ if ($sqlresults.state -eq 5)
     (
     	FILENAME = N'" + $sqlresults.path + "'," +
     "   SIZE = " + $sqlresults.sizeKB +"KB"+"`r`n"+
-"    );"
+    "    );"
 
     $strExport | out-file "$output_path\Buffer_Pool_Extension.sql" -Encoding ascii
 }

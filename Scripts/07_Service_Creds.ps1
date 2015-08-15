@@ -13,7 +13,7 @@
     07_Service_Creds.ps1 server01 sa password
 
 .Inputs
-    ServerName
+    ServerName\Instance, [SQLUser], [SQLPassword]
 
 .Outputs
 	HTML Files
@@ -46,7 +46,7 @@ if ($SQLInstance.length -eq 0)
 
 if ($SQLInstance.Length -eq 0) 
 {
-    Write-host -f yellow "Usage: ./07_Service_Creds.ps1 'SQLServerName'"
+    Write-Host -f yellow "Usage: ./07_Service_Creds.ps1 'SQLServerName'"
     Set-Location $BaseFolder
     exit
 }
@@ -98,7 +98,7 @@ else
 	}
 }
 
-# If SQLInstance is a named instance, drop the instance part so we can connect to the Windows server only
+# If SQLInstance is a named instance, drop the instance part so we can connect to the Windows Server by name only
 $pat = "\\"
 
 if ($SQLInstance -match $pat)
@@ -202,6 +202,7 @@ $myCSS | out-file "$fullfolderPath\HTMLReport.css" -Encoding ascii
 
 $mySettings = $results1
 $mySettings | select Name, StartName  | ConvertTo-Html  -CSSUri "HtmlReport.css"| Set-Content "$fullfolderPath\HtmlReport.html"
+
 Write-Output ("Exported: {0} NT Service Creds" -f $results1.count)
 
 # Return to Base
