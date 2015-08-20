@@ -69,47 +69,42 @@ if ($SQLInstance.Length -eq 0)
 # Working
 Write-Output "Server $SQLInstance"
 
+# fix target servername if given a SQL named instance
+$WinServer = ($SQLInstance -split {$_ -eq "," -or $_ -eq "\"})[0]
 
 # Server connection check
-[string]$serverauth = "win"
-if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
+try
 {
-	Write-Output "Testing SQL Auth"
-	try
+    $old_ErrorActionPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'SilentlyContinue'
+
+    if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
     {
+        Write-Output "Testing SQL Auth"
         $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
-        if($results -ne $null)
-        {
-            $myver = $results.Column1
-            Write-Output $myver
-            $serverauth="sql"
-        }	
-	}
-	catch
+        $serverauth="sql"
+    }
+    else
     {
-		Write-Host -f red "$SQLInstance appears offline - Try Windows Auth?"
-        Set-Location $BaseFolder
-		exit
-	}
+        Write-Output "Testing Windows Auth"
+    	$results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -QueryTimeout 10 -erroraction SilentlyContinue
+        $serverauth = "win"
+    }
+
+    if($results -ne $null)
+    {        
+        Write-Output ("SQL Version: {0}" -f $results.Column1)
+    }
+
+    # Reset default PS error handler
+    $ErrorActionPreference = $old_ErrorActionPreference 	
+
 }
-else
+catch
 {
-	Write-Output "Testing Windows Auth"
- 	Try
-    {
-        $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -QueryTimeout 10 -erroraction SilentlyContinue
-        if($results -ne $null)
-        {
-            $myver = $results.Column1
-            Write-Output $myver
-        }
-	}
-	catch
-    {
-	    Write-Host -f red "$SQLInstance appears offline - Try SQL Auth?" 
-        set-location $BaseFolder
-	    exit
-	}
+    Write-Host -f red "$SQLInstance appears offline - Try Windows Auth?"
+    Set-Location $BaseFolder
+	exit
 }
 
 # Create folder
@@ -169,63 +164,82 @@ Add-Content -Value "Server Hardware and Software Capabilities for $SQLInstance `
 $mystring =  "Server Name: " +$srv.Name 
 $mystring| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
 
-$mystring =  "Version: " +$srv.Version 
+$mystring =  "SQL Version: " +$srv.Version 
 $mystring| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
 
-$mystring =  "Edition: " +$srv.EngineEdition
+$mystring =  "SQL Edition: " +$srv.EngineEdition
 $mystring| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
 
-$mystring =  "Build Number: " +$srv.BuildNumber
+$mystring =  "SQL Build Number: " +$srv.BuildNumber
 $mystring| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
 
-$mystring =  "Product: " +$srv.Product
+$mystring =  "SQL Product: " +$srv.Product
 $mystring| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
 
-$mystring =  "Product Level: " +$srv.ProductLevel
+$mystring =  "SQL Product Level: " +$srv.ProductLevel
 $mystring| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
 
-$mystring =  "Processors: " +$srv.Processors
+$mystring =  "SQL Processors: " +$srv.Processors
 $mystring| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
 
-$mystring =  "Physical Memory: " +$srv.PhysicalMemory
+$mystring =  "SQL Max Physical Memory MB: " +$srv.PhysicalMemory
 $mystring| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
 
-$mystring =  "Physical Memory in Use: " +$srv.PhysicalMemoryUsageinKB
+$mystring =  "SQL Physical Memory in Use MB: " +$srv.PhysicalMemoryUsageinKB
 $mystring| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
 
-$mystring =  "MasterDB Path: " +$srv.MasterDBPath
+$mystring =  "SQL MasterDB Path: " +$srv.MasterDBPath
 $mystring| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
 
-$mystring =  "MasterDB LogPath: " +$srv.MasterDBLogPath
+$mystring =  "SQL MasterDB LogPath: " +$srv.MasterDBLogPath
 $mystring| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
 
-$mystring =  "Backup Directory: " +$srv.BackupDirectory
+$mystring =  "SQL Backup Directory: " +$srv.BackupDirectory
 $mystring| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
 
-$mystring =  "Install Shared Dir: " +$srv.InstallSharedDirectory
+$mystring =  "SQL Install Shared Dir: " +$srv.InstallSharedDirectory
 $mystring| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
 
-$mystring =  "Install Data Dir: " +$srv.InstallDataDirectory
+$mystring =  "SQL Install Data Dir: " +$srv.InstallDataDirectory
 $mystring| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
 
-$mystring =  "Service Account: " +$srv.ServiceAccount
+$mystring =  "SQL Service Account: " +$srv.ServiceAccount
 $mystring| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
 
+# Windows
 $mystring =  "OS Version: " +$srv.OSVersion
 $mystring| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
 
-$mystring =  "Is Clustered: " +$srv.IsClustered
+$mystring =  "OS Is Clustered: " +$srv.IsClustered
 $mystring| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
 
-$mystring =  "Is HADR: " +$srv.IsHadrEnabled
+$mystring =  "OS Is HADR: " +$srv.IsHadrEnabled
 $mystring| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
 
-# SMO works here for Mainboard and Model, but only SQL 2012+, that why Im using WMI
-$Mainboard = gwmi -ComputerName $server -q "select * from win32_computersystem" | select Manufacturer
-$Bios = gwmi -ComputerName $server -q "select * from win32_computersystem" | select Model
+$mystring = Get-WmiObject –class Win32_OperatingSystem -ComputerName $server | select Name, BuildNumber, BuildType, CurrentTimeZone, InstallDate, SystemDrive, SystemDevice, SystemDirectory
+Write-output ("OS Host Name: {0} " -f $mystring.Name)| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
+Write-output ("OS BuildNumber: {0} " -f $mystring.BuildNumber)| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
+Write-output ("OS Buildtype: {0} " -f $mystring.BuildType)| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
+Write-output ("OS CurrentTimeZone: {0}" -f $mystring.CurrentTimeZone)| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
+Write-output ("OS InstallDate: {0} " -f $mystring.InstallDate)| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
+Write-output ("OS SystemDrive: {0} " -f $mystring.SystemDrive)| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
+Write-output ("OS SystemDevice: {0} " -f $mystring.SystemDevice)| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
+Write-output ("OS SystemDirectory: {0} " -f $mystring.SystemDirectory)| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
 
-$mystring =  "Mainboard: " + $Mainboard.Manufacturer
-$mystring| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
+
+" " | out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
+
+# Hardware
+$mystring = Get-WmiObject Win32_Computersystem -ComputerName $server | select manufacturer
+Write-output ("HW Manufacturer: {0} " -f $mystring.Manufacturer)| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
+
+$mystring = Get-WmiObject –class Win32_processor -ComputerName $server | select Name,NumberOfCores,NumberOfLogicalProcessors
+Write-output ("HW Processor: {0} " -f $mystring.Name)| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
+Write-output ("HW CPUs: {0}" -f $mystring.NumberOfLogicalProcessors)| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
+Write-output ("HW Cores: {0}" -f $mystring.NumberOfCores)| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
+
+
+
 
 $mystring =  "Model: " + $Bios.Model
 $mystring| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append

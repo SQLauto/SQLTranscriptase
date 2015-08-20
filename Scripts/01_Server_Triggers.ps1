@@ -13,7 +13,7 @@
     01_Server_Triggers.ps1 server01 sa password
 
 .Inputs
-    ServerName\Instance, [SQLUser], [SQLPassword]
+    ServerName, [SQLUser], [SQLPassword]
 
 .Outputs
 	
@@ -24,6 +24,7 @@
 	
 .LINK
     https://github.com/gwalkey
+
 	
 #>
 
@@ -49,6 +50,7 @@ if ($SQLInstance.length -eq 0)
 	$Sqlinstance = 'localhost'
 }
 
+
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
 {
@@ -61,47 +63,45 @@ if ($SQLInstance.Length -eq 0)
 # Working
 Write-Output "Server $SQLInstance"
 
+
 # Server connection check
-$serverauth = "win"
-if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
+try
 {
-	Write-Output "Testing SQL Auth"
-	try
+    $old_ErrorActionPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'SilentlyContinue'
+
+    if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
     {
+        Write-Output "Testing SQL Auth"
         $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
-        if($results -ne $null)
-        {
-            $myver = $results.Column1
-            Write-Output $myver
-            $serverauth="sql"
-        }	
-	}
-	catch
+        $serverauth="sql"
+    }
+    else
     {
-		Write-Host -f red "$SQLInstance appears offline - Try Windows Auth?"
-        Set-Location $BaseFolder
-		exit
-	}
+        Write-Output "Testing Windows Auth"
+    	$results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -QueryTimeout 10 -erroraction SilentlyContinue
+        $serverauth = "win"
+    }
+
+    if($results -ne $null)
+    {        
+        Write-Output ("SQL Version: {0}" -f $results.Column1)
+    }
+
+    # Reset default PS error handler
+    $ErrorActionPreference = $old_ErrorActionPreference 	
+
 }
-else
+catch
 {
-	Write-Output "Testing Windows Auth"
- 	Try
-    {
-        $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -QueryTimeout 10 -erroraction SilentlyContinue
-        if($results -ne $null)
-        {
-            $myver = $results.Column1
-            Write-Output $myver
-        }
-	}
-	catch
-    {
-	    Write-Host -f red "$SQLInstance appears offline - Try SQL Auth?" 
-        Set-Location $BaseFolder
-	    exit
-	}
+    Write-Host -f red "$SQLInstance appears offline - Try Windows Auth?"
+    Set-Location $BaseFolder
+	exit
 }
+
+
+$old_ErrorActionPreference = $ErrorActionPreference
+$ErrorActionPreference = 'SilentlyContinue'
 
 $sql = 
 "
@@ -116,74 +116,45 @@ WHERE (tr.parent_class = 100)
 
 "
 
-
-# Test for Username/Password needed to connect - else assume WinAuth passthrough
-if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
+if ($serverauth -eq "sql") 
 {
 	Write-Output "Using SQL Auth"
-
-    $old_ErrorActionPreference = $ErrorActionPreference
-    $ErrorActionPreference = 'SilentlyContinue'
-
-	$results = Invoke-SqlCmd -query $sql -Server $SQLInstance –Username $myuser –Password $mypass 
-	if ($results -eq $null)
-    {
-        Write-Output "No Server Triggers Found on $SQLInstance"        
-        echo null > "$BaseFolder\$SQLInstance\01 - No Server Triggers Found.txt"
-        Set-Location $BaseFolder
-        exit
-    }
-
-    # Reset default PS error handler
-    $ErrorActionPreference = $old_ErrorActionPreference 
-
-    $fullfolderPath = "$BaseFolder\$sqlinstance\01 - Server Triggers"
-    if(!(test-path -path $fullfolderPath))
-    {
-        mkdir $fullfolderPath | Out-Null
-    }
-
-     
-    # SMO Script Out
-	Foreach ($row in $results)
-    {
-        $row.column1 | out-file "$fullfolderPath\Server_Triggers.sql" -Encoding ascii -Append
-		Add-Content -Value "`r`n" -Path "$fullfolderPath\Server_Triggers.sql" -Encoding Ascii
-    }
-	
+	$results2 = Invoke-SqlCmd -query $sql -Server $SQLInstance –Username $myuser –Password $mypass 
 }
 else
 {
 	Write-Output "Using Windows Auth"
-
-    $old_ErrorActionPreference = $ErrorActionPreference
-    $ErrorActionPreference = 'SilentlyContinue'
-
-	$results = Invoke-SqlCmd -query $sql -Server $SQLInstance	
-    if ($results -eq $null)
-    {
-        Write-Output "No Server Triggers Found on $SQLInstance"        
-        echo null > "$BaseFolder\$SQLInstance\01 - No Server Triggers Found.txt"
-        Set-Location $BaseFolder
-        exit
-    }
-
-    # Reset default PS error handler
-    $ErrorActionPreference = $old_ErrorActionPreference 
-
-    $fullfolderPath = "$BaseFolder\$sqlinstance\01 - Server Triggers"
-    if(!(test-path -path $fullfolderPath))
-    {
-        mkdir $fullfolderPath | Out-Null
-    }
-
-	# Export
-	Foreach ($row in $results)
-    {
-        $row.Definition+"`r`nGO`r`n`r`n",$row.enableCMD+"`r`nGO`r`n" | out-file "$fullfolderPath\Server_Triggers.sql" -Encoding ascii -Append
-    }
-	    
+    $results2 = Invoke-SqlCmd -query $sql -Server $SQLInstance	
 }
 
-# Return to Base
+	
+# Reset default PS error handler
+$ErrorActionPreference = $old_ErrorActionPreference 
+
+# If No Results, write status file
+if ($results2 -eq $null)
+{
+    Write-Output "No Server Triggers Found on $SQLInstance"        
+    echo null > "$BaseFolder\$SQLInstance\01 - No Server Triggers Found.txt"
+    Set-Location $BaseFolder
+    exit
+}
+
+
+# Create Output Folder
+$fullfolderPath = "$BaseFolder\$sqlinstance\01 - Server Triggers"
+if(!(test-path -path $fullfolderPath))
+{
+    mkdir $fullfolderPath | Out-Null
+}
+
+     
+# SMO Script Out
+Foreach ($row in $results2)
+{
+    $row.Definition+"`r`nGO`r`n`r`n",$row.enableCMD+"`r`nGO`r`n" | out-file "$fullfolderPath\Server_Triggers.sql" -Encoding ascii -Append
+	Add-Content -Value "`r`n" -Path "$fullfolderPath\Server_Triggers.sql" -Encoding Ascii
+}
+
+
 set-location $BaseFolder
