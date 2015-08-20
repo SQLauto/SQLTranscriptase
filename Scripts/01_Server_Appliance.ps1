@@ -159,7 +159,7 @@ else
 
 # Create output text file and add first line
 New-Item "$fullfolderPath\Server_Appliance.txt" -type file -force  |Out-Null
-Add-Content -Value "Server Hardware and Software Capabilities for $SQLInstance `r`n" -Path "$fullfolderPath\Server_Appliance.txt" -Encoding Ascii
+Add-Content -Value "Server Hardware and Software Inventory for $SQLInstance `r`n" -Path "$fullfolderPath\Server_Appliance.txt" -Encoding Ascii
 
 $mystring =  "Server Name: " +$srv.Name 
 $mystring| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
@@ -206,6 +206,9 @@ $mystring| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Appe
 $mystring =  "SQL Service Account: " +$srv.ServiceAccount
 $mystring| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
 
+" " | out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
+
+ 
 # Windows
 $mystring =  "OS Version: " +$srv.OSVersion
 $mystring| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
@@ -230,19 +233,13 @@ Write-output ("OS SystemDirectory: {0} " -f $mystring.SystemDirectory)| out-file
 " " | out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
 
 # Hardware
-$mystring = Get-WmiObject Win32_Computersystem -ComputerName $server | select manufacturer
+$mystring = Get-WmiObject -class Win32_Computersystem -ComputerName $server | select manufacturer
 Write-output ("HW Manufacturer: {0} " -f $mystring.Manufacturer)| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
 
 $mystring = Get-WmiObject –class Win32_processor -ComputerName $server | select Name,NumberOfCores,NumberOfLogicalProcessors
 Write-output ("HW Processor: {0} " -f $mystring.Name)| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
 Write-output ("HW CPUs: {0}" -f $mystring.NumberOfLogicalProcessors)| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
 Write-output ("HW Cores: {0}" -f $mystring.NumberOfCores)| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
-
-
-
-
-$mystring =  "Model: " + $Bios.Model
-$mystring| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
 
 $mystring =  "`r`nSQL Builds for reference: http://sqlserverbuilds.blogspot.com/ "
 $mystring| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
