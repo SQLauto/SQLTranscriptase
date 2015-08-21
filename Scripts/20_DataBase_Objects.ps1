@@ -216,6 +216,7 @@ $scripter.Options.IncludeHeaders        = $false
 $scripter.Options.IncludeDatabaseRoleMemberships= $true
 $scripter.Options.Indexes 				= $true
 
+$scripter.Options.NoFileGroup           = $false;
 $scripter.Options.NoCommandTerminator 	= $false;
 $scripter.Options.NonClusteredIndexes 	= $true
 
