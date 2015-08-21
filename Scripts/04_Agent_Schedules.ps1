@@ -12,16 +12,17 @@
     04_Agent_Schedules.ps1 server01 sa password
 
 .Inputs
-    ServerName, [SQLUser], [SQLPassword]
+    ServerName\Instance, [SQLUser], [SQLPassword]
 
 .Outputs
 
-	
 .NOTES
-
+    George Walkey
+    Richmond, VA USA
 	
 .LINK
-    
+    https://github.com/gwalkey
+	
 	
 #>
 
