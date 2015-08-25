@@ -252,7 +252,7 @@ declare @AgentSked TABLE(
 [Job] nvarchar(128) NOT NULL,
 [Job_Enabled] int not null,
 [Frequency] varchar(45) not null,
-[Freq_Interval] varchar(35) not null,
+[Freq_Interval] varchar(45) not null,
 [Freq_SubDay_Type] varchar(25) not null,
 [Freq_SubDay_Interval] int not null,
 [StartDate] varchar(10) not null,
