@@ -17,7 +17,7 @@
     ServerName\Instance, [SQLUser], [SQLPassword]
 
 .Outputs
-
+	Server Credential Objects in .SQL format
 	
 .NOTES
     George Walkey
