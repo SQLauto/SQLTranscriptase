@@ -17,7 +17,7 @@
     ServerName\Instance, [SQLUser], [SQLPassword]
 
 .Outputs
-
+	SQL Audits in .SQL format
 	
 .NOTES
     MSDN References:

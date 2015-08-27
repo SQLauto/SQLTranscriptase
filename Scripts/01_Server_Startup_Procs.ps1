@@ -14,15 +14,15 @@
 .EXAMPLE
     01_Server_Startup_Procs.ps1 server01 sa password
 
-.NOTES
-    George Walkey
-    Richmond, VA USA
-
 .Inputs
     ServerName\Instance, [SQLUser], [SQLPassword]
 
 .Outputs
+	Server Startup Stored Procedures (in Master DB) in .SQL format
 
+.NOTES
+    George Walkey
+    Richmond, VA USA
 	
 .LINK
     https://github.com/gwalkey

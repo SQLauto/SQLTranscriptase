@@ -16,7 +16,7 @@
     ServerName\Instance, [SQLUser], [SQLPassword]
 
 .Outputs
-
+	Server Logins in .SQL format
 	
 .NOTES
     George Walkey

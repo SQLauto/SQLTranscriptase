@@ -15,7 +15,7 @@
     ServerName\Instance, [SQLUser], [SQLPassword]
 
 .Outputs
-    DBMail Profiles to DBMAIL_Profiles.sql
+    DBMail Profiles in .sql format
 	
 .NOTES
     George Walkey

@@ -18,7 +18,7 @@
     ServerName\Instance, [SQLUser], [SQLPassword]
 
 .Outputs
-	HTML Files
+	SQL Server Global Settings in HTML Table format
 	
 .NOTES
     George Walkey

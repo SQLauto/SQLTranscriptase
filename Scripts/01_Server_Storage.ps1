@@ -17,7 +17,7 @@
     ServerName\Instance, [SQLUser], [SQLPassword]
 
 .Outputs
-	HTML File
+	Server Storage (Drive Letters) in HTML File
 	
 .NOTES
     George Walkey

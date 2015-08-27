@@ -18,12 +18,11 @@
 .EXAMPLE
     14_Service_Broker.ps1 server01 sa password
 
-
 .Inputs
     ServerName\Instance, [SQLUser], [SQLPassword]
 
 .Outputs
-
+	Service Broker Objects in .SQL format
 	
 .NOTES
     George Walkey

@@ -16,7 +16,7 @@
     ServerName\Instance, [SQLUser], [SQLPassword]
 
 .Outputs
-
+	SSIS 2012+ Catalog Projects/Folders/Packages in .ispac format
 	
 .NOTES
     George Walkey

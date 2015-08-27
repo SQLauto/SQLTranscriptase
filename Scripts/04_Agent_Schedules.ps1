@@ -15,6 +15,8 @@
     ServerName\Instance, [SQLUser], [SQLPassword]
 
 .Outputs
+	Agent Schedules in .SQL format
+	Agent Schedules in a Visual Grid HTML Table format
 
 .NOTES
     George Walkey

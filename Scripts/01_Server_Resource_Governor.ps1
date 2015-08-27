@@ -16,7 +16,7 @@
     ServerName\Instance, [SQLUser], [SQLPassword]
 
 .Outputs
-
+	Server Resource Governor Pools and Workloads in .SQL format
 	
 .NOTES
     George Walkey

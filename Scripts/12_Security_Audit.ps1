@@ -16,7 +16,7 @@
     ServerName\Instance, [SQLUser], [SQLPassword]
 
 .Outputs
-	HTML Files
+	Server Logins, Database Users, Database Roles, Login-to-User mappings, DB-level and Object-level Permissions in HTML format
 	
 .NOTES
     George Walkey

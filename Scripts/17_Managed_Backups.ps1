@@ -14,18 +14,18 @@
 .EXAMPLE
     17_Managed_Backups.ps1 server01 sa password
 
-.NOTES
-    George Walkey
-    Richmond, VA USA
-
 .Inputs
     ServerName\Instance, [SQLUser], [SQLPassword]
 
 .Outputs
+	Managed Backup settings in .SQL format
 
+.NOTES
+    George Walkey
+    Richmond, VA USA
 
 .LINK
-    https://github.com/gwalkey
+	https://github.com/gwalkey
 	https://msdn.microsoft.com/en-us/library/dn449497(v=sql.120).aspx
 #>
 

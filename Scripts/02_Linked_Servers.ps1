@@ -17,6 +17,7 @@
     ServerName\Instance, [SQLUser], [SQLPassword]
 
 .Outputs
+	Linked Servers in .SQL format
 
 .NOTES
     George Walkey

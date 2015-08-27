@@ -16,7 +16,7 @@
     ServerName\Instance, [SQLUser], [SQLPassword]
 
 .Outputs
-	HTML Files
+	SQL Server NT Service Credentials in HTML Format
 	
 .NOTES
     George Walkey

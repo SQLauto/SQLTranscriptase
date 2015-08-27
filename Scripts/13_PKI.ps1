@@ -20,6 +20,7 @@
     ServerName\Instance, [SQLUser], [SQLPassword]
 
 .Outputs
+	PKI Objects txt, pvk, cer formats
 
 .NOTES
     This code CANNOT Script Out PKI Keys and Certs signed with passwords, unless you know the password and OPEN the Key/Cert first!

@@ -16,7 +16,7 @@
     ServerName\Instance, [SQLUser], [SQLPassword]
 
 .Outputs
-
+	Agent Jobs in .SQL format
 	
 .NOTES
     George Walkey

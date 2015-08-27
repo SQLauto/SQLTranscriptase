@@ -16,7 +16,7 @@
     ServerName\Instance, [SQLUser], [SQLPassword]
 
 .Outputs
-
+	Agent Alerts in .SQL format
 	
 .NOTES
     George Walkey

@@ -16,7 +16,7 @@
     ServerName\Instance, [SQLUser], [SQLPassword]
 
 .Outputs
-
+	Server Hardware/Software Inventory in txt format
 	
 .NOTES
     George Walkey

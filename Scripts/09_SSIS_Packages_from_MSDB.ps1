@@ -15,7 +15,7 @@
     ServerName\Instance, [SQLUser], [SQLPassword]
 
 .Outputs
-
+	SSIS 2005-2008 Packages in .dtsx format
 	
 .NOTES
     George Walkey

@@ -18,12 +18,11 @@
 .EXAMPLE
     10_SSAS_Databases.ps1 server01 sa password
 
-
 .Inputs
     ServerName\Instance, [SQLUser], [SQLPassword]
 
 .Outputs
-
+	SSAS MD and Tabular Databases in XMLA format
 	
 .NOTES
     George Walkey

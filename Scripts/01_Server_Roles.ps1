@@ -16,7 +16,7 @@
     ServerName\Instance, [SQLUser], [SQLPassword]
 
 .Outputs
-	HTML Files
+	Fixed Server Roles in HTML format
 	
 .NOTES
     George Walkey

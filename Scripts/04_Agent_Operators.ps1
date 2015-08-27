@@ -15,7 +15,7 @@
     ServerName\Instance, [SQLUser], [SQLPassword]
 
 .Outputs
-
+	Agent Operators in .SQL format
 
 .NOTES
     George Walkey

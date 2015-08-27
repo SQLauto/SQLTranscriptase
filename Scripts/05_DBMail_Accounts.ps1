@@ -15,7 +15,7 @@
     ServerName\Instance, [SQLUser], [SQLPassword]
 
 .Outputs
-
+	DBMail Accounts in .SQL format
 	
 .NOTES
     George Walkey

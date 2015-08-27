@@ -15,7 +15,7 @@
     ServerName\Instance, [SQLUser], [SQLPassword]
 
 .Outputs
-    .sql files
+    Extended Event Sessions in .SQL format
 	
 .NOTES
     George Walkey

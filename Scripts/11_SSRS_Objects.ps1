@@ -6,7 +6,7 @@
    Writes the SSRS Objects out to the "11 - SSRS" folder   
    Objects written include:
    RDL files
-   Timed Subscriptions
+   Timed Subscriptions in Visual Format
    RSreportserver.config file
    Encryption Keys   
    
@@ -16,12 +16,11 @@
 .EXAMPLE
     11_SSRS_Objects.ps1 server01 sa password
 
-
 .Inputs
     ServerName\Instance, [SQLUser], [SQLPassword]
 
 .Outputs
-
+	SSRS Objects
 	
 .NOTES
     George Walkey

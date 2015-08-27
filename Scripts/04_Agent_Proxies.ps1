@@ -17,7 +17,7 @@
     ServerName\Instance, [SQLUser], [SQLPassword]
 
 .Outputs
-
+	Agent Proxies in .SQL format
 	
 .NOTES
     George Walkey

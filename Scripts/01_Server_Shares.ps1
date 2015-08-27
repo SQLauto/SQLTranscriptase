@@ -16,7 +16,7 @@
     ServerName\Instance, [SQLUser], [SQLPassword]
 
 .Outputs
-	HTML Files
+	Server NTFS File Shares in HTML Format
 	
 .NOTES
     George Walkey

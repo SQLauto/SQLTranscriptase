@@ -18,7 +18,7 @@
     ServerName\Instance, [SQLUser], [SQLPassword]
 
 .Outputs
-
+	.NET Assemblies in .SQL format
 	
 .NOTES
     George Walkey

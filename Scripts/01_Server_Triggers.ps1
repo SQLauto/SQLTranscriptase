@@ -16,7 +16,7 @@
     ServerName, [SQLUser], [SQLPassword]
 
 .Outputs
-	
+	Server Triggers in .SQL Format
 	
 .NOTES
     George Walkey
