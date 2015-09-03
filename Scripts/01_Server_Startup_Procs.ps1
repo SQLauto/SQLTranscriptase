@@ -15,17 +15,14 @@
     01_Server_Startup_Procs.ps1 server01 sa password
 
 .Inputs
-    ServerName\Instance, [SQLUser], [SQLPassword]
+    ServerName, [SQLUser], [SQLPassword]
 
 .Outputs
-	Server Startup Stored Procedures (in Master DB) in .SQL format
 
-.NOTES
-    George Walkey
-    Richmond, VA USA
-	
+.NOTES	
+
 .LINK
-    https://github.com/gwalkey
+
 	
 #>
 
@@ -40,13 +37,17 @@ Param(
 
 Write-Host  -f Yellow -b Black "01 - Server Startup Stored Procedures"
 
+# Load SMO Assemblies
+Import-Module ".\LoadSQLSmo.psm1"
+LoadSQLSMO
+
+
 # assume localhost
 if ($SQLInstance.length -eq 0)
 {
 	Write-Output "Assuming localhost"
 	$Sqlinstance = 'localhost'
 }
-
 
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
@@ -80,7 +81,7 @@ try
     }
 
     if($results -ne $null)
-    {        
+    {
         Write-Output ("SQL Version: {0}" -f $results.Column1)
     }
 
@@ -121,8 +122,6 @@ function CopyObjectsToFiles($objects, $outDir) {
 
 
 
-# Load SQL SMO Assembly
-[System.Reflection.Assembly]::LoadWithPartialName("Microsoft.SqlServer.SMO") | out-null
 
 # Set Local Vars
 $server = $SQLInstance
@@ -142,6 +141,7 @@ else
 }
 
 $db 	= New-Object ("Microsoft.SqlServer.Management.SMO.Database")
+$tbl	= New-Object ("Microsoft.SqlServer.Management.SMO.Table")
 
 
 # Set scripter options to ensure only data is scripted
@@ -199,22 +199,21 @@ $scripter.Options.XmlIndexes            = $true
 
 Write-Output "Starting Export..."
 
-# Use Master DB Only
 $sqlDatabase = $srv.Databases['Master']
 
-# Fixup bad characters in export filename
+# Script out objects for each DB
 $db = $sqlDatabase
 $fixedDBName = $db.name.replace('[','')
 $fixedDBName = $fixedDBName.replace(']','')
 $output_path = "$BaseFolder\$SQLInstance\01 - Server Startup Procs\"
 
-# Get list of User SPs in Master
+# Stored Procs
 Write-Output "$fixedDBName - Stored Procs"
-
 $storedProcs = $db.StoredProcedures | Where-object  {-not $_.IsSystemObject  }
 CopyObjectsToFiles $storedProcs $output_path
 
 Write-Output ("{0} Startup Stored Procs Exported" -f $storedProcs.count)
-# Return to Base
+
+# finished
 set-location $BaseFolder
 

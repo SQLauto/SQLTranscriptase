@@ -12,17 +12,16 @@
     04_Agent_Operators.ps1 server01 sa password
 	
 .Inputs
-    ServerName\Instance, [SQLUser], [SQLPassword]
+    ServerName, [SQLUser], [SQLPassword]
 
 .Outputs
-	Agent Operators in .SQL format
+
 
 .NOTES
-    George Walkey
-    Richmond, VA USA
+
 	
 .LINK
-    https://github.com/gwalkey
+
 	
 #>
 
@@ -39,6 +38,10 @@ Param(
 #  Script Name
 Write-Host  -f Yellow -b Black "04 - Agent Operators"
 
+# Load SMO Assemblies
+Import-Module ".\LoadSQLSmo.psm1"
+LoadSQLSMO
+
 # assume localhost
 if ($SQLInstance.length -eq 0)
 {
@@ -49,7 +52,7 @@ if ($SQLInstance.length -eq 0)
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
 {
-    Write-Host -f yellow "Usage: ./04_Agent_Operators.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
+    Write-host -f yellow "Usage: ./04_Agent_Operators.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
     Set-Location $BaseFolder
     exit
 }
@@ -58,40 +61,6 @@ if ($SQLInstance.Length -eq 0)
 # Working
 Write-Output "Server $SQLInstance"
 
-# Server connection check
-try
-{
-    $old_ErrorActionPreference = $ErrorActionPreference
-    $ErrorActionPreference = 'SilentlyContinue'
-
-    if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
-    {
-        Write-Output "Testing SQL Auth"
-        $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
-        $serverauth="sql"
-    }
-    else
-    {
-        Write-Output "Testing Windows Auth"
-    	$results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -QueryTimeout 10 -erroraction SilentlyContinue
-        $serverauth = "win"
-    }
-
-    if($results -ne $null)
-    {        
-        Write-Output ("SQL Version: {0}" -f $results.Column1)
-    }
-
-    # Reset default PS error handler
-    $ErrorActionPreference = $old_ErrorActionPreference 	
-
-}
-catch
-{
-    Write-Host -f red "$SQLInstance appears offline - Try Windows Auth?"
-    Set-Location $BaseFolder
-	exit
-}
 
 $sql = 
 "
@@ -163,62 +132,80 @@ if(!(test-path -path $fullfolderPath))
 }
 	
 # Test for Username/Password needed to connect - else assume WinAuth passthrough
-if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
-{
-	Write-Output "Using SQL Auth"
 
+# Server connection check
+try
+{
     $old_ErrorActionPreference = $ErrorActionPreference
     $ErrorActionPreference = 'SilentlyContinue'
 
-	$results = Invoke-SqlCmd -query $sql -Server $SQLInstance –Username $myuser –Password $mypass 	
-    if ($results -eq $null )
+    if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
     {
-        Write-Output "No Agent Operators Found on $SQLInstance"
-        echo null > "$BaseFolder\$SQLInstance\04 - No Agent Operators Found.txt"
-        Set-Location $BaseFolder
-        exit
+        Write-Output "Testing SQL Auth"
+        $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
+        $serverauth="sql"
+    }
+    else
+    {
+        Write-Output "Testing Windows Auth"
+    	$results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -QueryTimeout 10 -erroraction SilentlyContinue
+        $serverauth = "win"
+    }
+
+    if($results -ne $null)
+    {
+        Write-Output ("SQL Version: {0}" -f $results.Column1)
     }
 
     # Reset default PS error handler
-    $ErrorActionPreference = $old_ErrorActionPreference 
+    $ErrorActionPreference = $old_ErrorActionPreference 	
+
+}
+catch
+{
+    Write-Host -f red "$SQLInstance appears offline - Try Windows Auth?"
+    Set-Location $BaseFolder
+	exit
+}
 
 
-	New-Item "$fullfolderPath\Agent_Operators.sql" -type file -force  |Out-Null
-    Foreach ($row in $results)
-    {
-        $row.column1 | out-file "$fullfolderPath\Agent_Operators.sql" -Encoding ascii -Append
-		Add-Content -Value "`r`n" -Path "$fullfolderPath\Agent_Operators.sql" -Encoding Ascii
-    }
+# Turn Off Default Error Handler
+$old_ErrorActionPreference = $ErrorActionPreference
+$ErrorActionPreference = 'SilentlyContinue'
 
-    Write-Output ("Exported: {0} Operators" -f $results.count)
+if ($serverauth -eq "win")
+{
+	Write-Output "Using Windows Auth"
+	$results = Invoke-SqlCmd -query $sql -Server $SQLInstance
 }
 else
 {
-	Write-Output "Using Windows Auth"
+	Write-Output "Using SQL Auth"
+    $results = Invoke-SqlCmd -query $sql -Server $SQLInstance –Username $myuser –Password $mypass
+}
 
-    $old_ErrorActionPreference = $ErrorActionPreference
-    $ErrorActionPreference = 'SilentlyContinue'
+if ($results -eq $null )
+{
+    write-output "No Agent Operators Found on $SQLInstance"
+    echo null > "$BaseFolder\$SQLInstance\04 - No Agent Operators Found.txt"
+    Set-Location $BaseFolder
+    exit
+}
 
-	$results = Invoke-SqlCmd -query $sql -Server $SQLInstance  	
-    if ($results -eq $null )
-    {
-        Write-Output "No Agent Operators Found on $SQLInstance"
-        echo null > "$BaseFolder\$SQLInstance\04 - No Agent Operators Found.txt"
-        Set-Location $BaseFolder
-        exit
-    }
+# Reset default PS error handler
+$ErrorActionPreference = $old_ErrorActionPreference 
 
-    # Reset default PS error handler
-    $ErrorActionPreference = $old_ErrorActionPreference 
+New-Item "$fullfolderPath\Agent_Operators.sql" -type file -force  |Out-Null
+Foreach ($row in $results)
+{
+    $row.column1 | out-file "$fullfolderPath\Agent_Operators.sql" -Encoding ascii -Append
+	Add-Content -Value "`r`n" -Path "$fullfolderPath\Agent_Operators.sql" -Encoding Ascii
+}
 
-	New-Item "$fullfolderPath\Agent_Operators.sql" -type file -force  |Out-Null
-    Foreach ($row in $results)
-    {
-        $row.column1 | out-file "$fullfolderPath\Agent_Operators.sql" -Encoding ascii -Append
-		Add-Content -Value "`r`n" -Path "$fullfolderPath\Agent_Operators.sql" -Encoding Ascii
-    }
+if ($results.Count -gt 0)
+{
     Write-Output ("{0} Operators Exported" -f $results.count)
 }
 
-# Return to Base
+
 set-location $BaseFolder

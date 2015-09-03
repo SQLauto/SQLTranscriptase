@@ -13,17 +13,16 @@
     01_Server_Resource_Governor.ps1 server01 sa password
 
 .Inputs
-    ServerName\Instance, [SQLUser], [SQLPassword]
+    ServerName, [SQLUser], [SQLPassword]
 
 .Outputs
-	Server Resource Governor Pools and Workloads in .SQL format
+
 	
 .NOTES
-    George Walkey
-    Richmond, VA USA
+
 	
 .LINK
-    https://github.com/gwalkey
+
 	
 #>
 
@@ -36,8 +35,6 @@ Param(
 
 [string]$BaseFolder = (Get-Item -Path ".\" -Verbose).FullName
 
-Import-Module "sqlps" -DisableNameChecking -erroraction SilentlyContinue
-
 #  Script Name
 Write-Host  -f Yellow -b Black "01 - Server Resource Governor"
 
@@ -45,19 +42,24 @@ Write-Host  -f Yellow -b Black "01 - Server Resource Governor"
 if ($SQLInstance.length -eq 0)
 {
 	Write-Output "Assuming localhost"
-	$SQLinstance = 'localhost'
+	$Sqlinstance = 'localhost'
 }
 
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
 {
-    Write-Host -f yellow "Usage: ./01_Server_Resource_Governor.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
+    Write-host -f yellow "Usage: ./01_Server_Resource_Governor.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
     Set-Location $BaseFolder
     exit
 }
 
 # Working
 Write-Output "Server $SQLInstance"
+
+# Load SMO Assemblies
+Import-Module ".\LoadSQLSmo.psm1"
+LoadSQLSMO
+
 
 
 # Server connection check
@@ -80,7 +82,7 @@ try
     }
 
     if($results -ne $null)
-    {        
+    {
         Write-Output ("SQL Version: {0}" -f $results.Column1)
     }
 
@@ -120,15 +122,13 @@ function CopyObjectsToFiles($objects, $outDir) {
 }
 
 
-# Load SQL SMO Assembly
-[System.Reflection.Assembly]::LoadWithPartialName("Microsoft.SqlServer.SMO") | out-null
 
 # Set Local Vars
 $server	= $SQLInstance
 
 if ($serverauth -eq "win")
 {
-    $srv        = New-Object "Microsoft.SqlServer.Management.SMO.Server" $server
+    $srv    = New-Object "Microsoft.SqlServer.Management.SMO.Server" $server
     $scripter 	= New-Object ("Microsoft.SqlServer.Management.SMO.Scripter") ($server)
 }
 else
@@ -189,7 +189,7 @@ $scripter.Options.SchemaQualifyForeignKeysReferences = $true
 $scripter.Options.ToFileOnly 			= $true
 
 
-# With Dependencies creates one huge file for all tables in the order needed to maintain RefIntegrity
+# With Dependencies create one huge file for all tables in the order needed to maintain RefIntegrity
 $scripter.Options.WithDependencies		= $false
 $scripter.Options.XmlIndexes            = $true
 
@@ -228,5 +228,4 @@ foreach ($pool in $pools)
     
 } 
 
-# Return to Base
 set-location $BaseFolder

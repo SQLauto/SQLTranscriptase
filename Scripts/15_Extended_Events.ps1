@@ -12,17 +12,15 @@
     15_Extended_Events.ps1 server01 sa password
 
 .Inputs
-    ServerName\Instance, [SQLUser], [SQLPassword]
+    ServerName, [SQLUser], [SQLPassword]
 
 .Outputs
-    Extended Event Sessions in .SQL format
+    .sql files
 	
 .NOTES
-    George Walkey
-    Richmond, VA USA
+
 	
 .LINK
-    https://github.com/gwalkey
 	
 #>
 
@@ -43,11 +41,12 @@ Param(
 
 [string]$BaseFolder = (Get-Item -Path ".\" -Verbose).FullName
 
-Import-Module "sqlps" -DisableNameChecking -erroraction SilentlyContinue
-
-
 #  Script Name
 Write-Host -f Yellow -b Black "15 - Extended Events"
+
+# Load SMO Assemblies
+Import-Module ".\LoadSQLSmo.psm1"
+LoadSQLSMO
 
 # assume localhost
 if ($SQLInstance.length -eq 0)
@@ -60,13 +59,14 @@ if ($SQLInstance.length -eq 0)
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
 {
-    Write-Host -f yellow "Usage: ./15_Extended_Events.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
+    Write-host -f yellow "Usage: ./15_Extended_Events.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
     Set-Location $BaseFolder
     exit
 }
 
 # Working
 Write-Output "Server $SQLInstance"
+
 
 # Server connection check
 try
@@ -79,18 +79,18 @@ try
         Write-Output "Testing SQL Auth"
         $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
         $serverauth="sql"
-		$myver = $results.Column1
+        $myver = $results.Column1
     }
     else
     {
         Write-Output "Testing Windows Auth"
     	$results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -QueryTimeout 10 -erroraction SilentlyContinue
         $serverauth = "win"
-		$myver = $results.Column1
+        $myver = $results.Column1
     }
 
     if($results -ne $null)
-    {        
+    {
         Write-Output ("SQL Version: {0}" -f $results.Column1)
     }
 
@@ -108,11 +108,11 @@ catch
 
 if (!($myver -like "11.0*") -and !($myver -like "12.0*") -and !($myver -like "13.0*"))
 {
-    Write-Output "I only support Extended Events on SQL Server 2012 or higher"
+    Write-Output "Extended Events supported only on SQL Server 2012 or higher"
     exit
 }
 
-#  Anything to do?
+#  Any to do?
 $sqlES = 
 " 
 select [event_session_id],[name] from sys.server_event_sessions
@@ -172,7 +172,7 @@ if(!(test-path -path $fullfolderPath))
 
 
 # *Must Credit*
-# Jonathan Kehayias for the following code, including the correct DLLs, order of things and the need to use the ConnectionStringBuilder
+# Jonathan Kehayias for the following code, including the correct DLLs, order of things and the ConnectionStringBuilder
 # https://www.sqlskills.com/blogs/jonathan/
 # http://sqlperformance.com/author/jonathansqlskills-com
 # 
@@ -196,16 +196,17 @@ else
     $conbuild.psbase.Password = $mypass
 }
 
-# Connect to server
+# Connect
 $sqlconn = New-Object System.Data.SqlClient.SqlConnection $conBuild.ConnectionString.ToString();
 
-# Grab the SqlStoreConnection
+# Server
 $Server = New-Object Microsoft.SqlServer.Management.Sdk.Sfc.SqlStoreConnection $sqlconn
 
-# XE Sessions are stored in the XEStore Object
+# XE Sessions
 $XEStore = New-Object Microsoft.SqlServer.Management.XEvent.XEStore $Server
 
-# Export the XE Sessions
+$ScrapSession = $XEStore.Sessions["system_health"];
+
 foreach($XESession in $XEStore.Sessions)
 {    
     Write-Output ("Scripting out {0}" -f $XESession.Name)
@@ -215,5 +216,7 @@ foreach($XESession in $XEStore.Sessions)
     $script = $XESession.ScriptCreate().GetScript()    
     $script | out-file  $output_path -Force -encoding ascii
 }
+
+Write-Output ("{0} Extended Event Sessions Exported" -f $XEStore.Sessions.Count)
 
 set-location $BaseFolder

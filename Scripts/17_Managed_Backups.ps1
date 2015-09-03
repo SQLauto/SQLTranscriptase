@@ -14,19 +14,18 @@
 .EXAMPLE
     17_Managed_Backups.ps1 server01 sa password
 
+.NOTES
+
+
 .Inputs
-    ServerName\Instance, [SQLUser], [SQLPassword]
+    ServerName, [SQLUser], [SQLPassword]
 
 .Outputs
-	Managed Backup settings in .SQL format
 
-.NOTES
-    George Walkey
-    Richmond, VA USA
 
 .LINK
-	https://github.com/gwalkey
-	https://msdn.microsoft.com/en-us/library/dn449497(v=sql.120).aspx
+    https://msdn.microsoft.com/en-us/library/dn449497(v=sql.120).aspx
+    
 #>
 
 Param(
@@ -40,14 +39,17 @@ Param(
 
 Write-Host  -f Yellow -b Black "17 - Managed Backups"
 
+# Load SMO Assemblies
+Import-Module ".\LoadSQLSmo.psm1"
+LoadSQLSMO
+
 
 # assume localhost
 if ($SQLInstance.length -eq 0)
 {
 	Write-Output "Assuming localhost"
-	$Sqlinstance = 'localhost'
+	$SQLInstance = 'localhost'
 }
-
 
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
@@ -60,7 +62,6 @@ if ($SQLInstance.Length -eq 0)
 # Working
 Write-Output "Server $SQLInstance"
 
-import-module "sqlps" -DisableNameChecking -erroraction SilentlyContinue
 
 # Server connection check
 try
@@ -73,18 +74,18 @@ try
         Write-Output "Testing SQL Auth"
         $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
         $serverauth="sql"
-		$myver = $results.Column1
+        $myver = $results.Column1
     }
     else
     {
         Write-Output "Testing Windows Auth"
     	$results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -QueryTimeout 10 -erroraction SilentlyContinue
         $serverauth = "win"
-		$myver = $results.Column1
+        $myver = $results.Column1
     }
 
     if($results -ne $null)
-    {        
+    {
         Write-Output ("SQL Version: {0}" -f $results.Column1)
     }
 
@@ -98,6 +99,7 @@ catch
     Set-Location $BaseFolder
 	exit
 }
+
 
 # Bail out if not 2014 or greater
 [int]$ver = $myver.Substring(0,$myver.IndexOf('.'))
@@ -137,7 +139,6 @@ IF ( $ver -eq "13" )
    Write-Output "SQL Server 2016"
 }
 
-
 # Bail if not 2014 or greater
 if ($ver -lt 12)
 {
@@ -146,10 +147,6 @@ if ($ver -lt 12)
     Set-Location $BaseFolder    
     exit
 }
-
-# Load SQL SMO Assemblies
-[System.Reflection.Assembly]::LoadWithPartialName("Microsoft.SqlServer.SMO") | out-null
-[System.Reflection.Assembly]::LoadWithPartialName('Microsoft.SqlServer.SMOExtended') | out-null
 
 
 # Set Local Vars
@@ -223,7 +220,7 @@ $strEXEC += " ,@encryptor_name= N'"       + $srv.smartadmin.EncryptorName+"'; `r
 Add-Content $strEXEC -Path "$output_path\Managed_Backups_Server_Settings.sql" -Encoding Ascii
 
 $mySQLquery = "USE msdb; SELECT `
-db_name, 
+distinct db_name, 
 is_managed_backup_enabled, 
 storage_url, 
 retention_days, 
@@ -274,9 +271,14 @@ foreach ($MB in $sqlresults)
     $myoutputstring += " ,@encryptor_name= N'" + $MB.encryptor_name + "' `r`n"
 
     $myoutputstring | out-file -FilePath $myoutputfile -append -encoding ascii -width 500
+	
+	$fixedDBName
 }
 
-Write-Output ("Exported: {0} Managed Backup Jobs" -f $sqlresults.count)
+if ($sqlresults.count -gt 0)
+{
+	Write-Output ("{0} Managed Backup Jobs Exported" -f $sqlresults.count)
+}
 
 # finish
 set-location $BaseFolder

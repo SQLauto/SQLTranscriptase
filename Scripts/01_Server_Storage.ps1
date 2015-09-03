@@ -14,17 +14,16 @@
     01_Server_Storage.ps1 server01 sa password
 
 .Inputs
-    ServerName\Instance, [SQLUser], [SQLPassword]
+    ServerName, [SQLUser], [SQLPassword]
 
 .Outputs
-	Server Storage (Drive Letters) in HTML File
+	HTML File
 	
 .NOTES
-    George Walkey
-    Richmond, VA USA
+
 	
 .LINK
-    https://github.com/gwalkey
+
 	
 #>
 
@@ -38,6 +37,7 @@ Param(
 
 Write-Host  -f Yellow -b Black "01 - Server Storage"
 
+
 # assume localhost
 if ($SQLInstance.length -eq 0)
 {
@@ -48,7 +48,7 @@ if ($SQLInstance.length -eq 0)
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
 {
-    Write-Host -f yellow "Usage: ./01_Server_Storage.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
+    Write-host -f yellow "Usage: ./01_Server_Storage.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
     Set-Location $BaseFolder
     exit
 }
@@ -57,40 +57,6 @@ if ($SQLInstance.Length -eq 0)
 # Working
 Write-Output "Server $SQLInstance"
 
-# Server connection check
-try
-{
-    $old_ErrorActionPreference = $ErrorActionPreference
-    $ErrorActionPreference = 'SilentlyContinue'
-
-    if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
-    {
-        Write-Output "Testing SQL Auth"
-        $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
-        $serverauth="sql"
-    }
-    else
-    {
-        Write-Output "Testing Windows Auth"
-    	$results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -QueryTimeout 10 -erroraction SilentlyContinue
-        $serverauth = "win"
-    }
-
-    if($results -ne $null)
-    {        
-        Write-Output ("SQL Version: {0}" -f $results.Column1)
-    }
-
-    # Reset default PS error handler
-    $ErrorActionPreference = $old_ErrorActionPreference 	
-
-}
-catch
-{
-    Write-Host -f red "$SQLInstance appears offline - Try Windows Auth?"
-    Set-Location $BaseFolder
-	exit
-}
 
 # Split out servername only from named instance
 $WinServer = ($SQLInstance -split {$_ -eq "," -or $_ -eq "\"})[0]
@@ -189,11 +155,11 @@ td
     }
 "
 
-
 $myCSS | out-file "$fullfolderPath\HTMLReport.css" -Encoding ascii
 
-# Export
-$VolumeArray | select Name, Label, FileSystem, DriveType, $VolumeTotalGB, $VolumeUsedGB, $VolumeFreeGB, BootVolume, DriveLetter, BlockSize  | ConvertTo-Html  -CSSUri "HtmlReport.css"| Set-Content "$fullfolderPath\HtmlReport.html"
+# Export It
+$mySettings = $VolumeArray
+$mySettings | select Name, Label, FileSystem, DriveType, $VolumeTotalGB, $VolumeUsedGB, $VolumeFreeGB, BootVolume, DriveLetter, BlockSize  | ConvertTo-Html  -PreContent "<h1>$SqlInstance</H1><H2>Server Storage Volumes</h2>" -CSSUri "HtmlReport.css"| Set-Content "$fullfolderPath\HtmlReport.html"
 
-# Return to Base
+
 set-location $BaseFolder

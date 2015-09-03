@@ -1,9 +1,9 @@
 <#
 .SYNOPSIS
-    Runs all other Powershell scripts for the target server
+    Runs all other Powershell ps1 scripts for the target server
 	
 .DESCRIPTION
-    Runs all other Powershell scripts for the target server    
+    Runs all other Powershell ps1 scripts for the target server    
 	
 .EXAMPLE
     00_RunAllScripts.ps1 localhost
@@ -12,18 +12,16 @@
     00_RunAllScripts.ps1 server01 sa password
 
 .Inputs
-    ServerName\Instance, [SQLUser], [SQLPassword]
+    ServerName, [SQLUser], [SQLPassword]
 
 .Outputs
-    Runs all other Powershell scripts for the target server
+
 	
 .NOTES
-    George Walkey
-    Richmond, VA USA
+	Testing TFS Versioning
 	
 .LINK
-    https://github.com/gwalkey
-
+	
 #>
 
 
@@ -33,32 +31,38 @@ Param(
   [string]$mypass
 )
 
-# --- TIP ---
+# --- TIPS ---
 # Want to Register these or your own scripts as a Powershell Module?
 # Rename them from .ps1 to .psm1 and put them in one of the folders pointed to by
 # $env:PSModulePath (the Windows Environment path)
-# Then, use import-module as below
 
-cls
+$startTime = get-date
+
 [string]$BaseFolder = (Get-Item -Path ".\" -Verbose).FullName
 
-Import-Module "sqlps" -DisableNameChecking -erroraction SilentlyContinue
+# Load SMO Assemblies
+Import-Module ".\LoadSQLSmo.psm1"
+LoadSQLSMO
+
+#  Script Name
+Write-Host -f Yellow -b Black "00 - RunAllScripts"
 
 # assume localhost
 if ($SQLInstance.length -eq 0)
 {
 	Write-Output "Assuming localhost"
-	$SQLInstance = 'localhost'
+	$Sqlinstance = 'localhost'
 }
 
 
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
 {
-    Write-Host -f yellow "Usage: ./00_RunAllScripts.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
+    Write-host -f yellow "Usage: ./00_RunAllScripts.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if SQL Auth)"
 	set-location "$BaseFolder"
     exit
 }
+
 
 # Server connection check
 if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
@@ -113,8 +117,8 @@ set-location $BaseFolder
 & .\01_Server_Triggers.ps1 $SQLInstance $myuser $mypass
 & .\02_Linked_Servers.ps1 $SQLInstance $myuser $mypass
 & .\03_NET_Assemblies.ps1 $SQLInstance $myuser $mypass
-& .\04_Agent_Alerts.ps1 $SQLInstance $myuser $mypass
 & .\04_Agent_Jobs.ps1 $SQLInstance $myuser $mypass
+& .\04_Agent_Alerts.ps1 $SQLInstance $myuser $mypass
 & .\04_Agent_Operators.ps1 $SQLInstance $myuser $mypass
 & .\04_Agent_Proxies.ps1 $SQLInstance $myuser $mypass
 & .\04_Agent_Schedules.ps1 $SQLInstance $myuser $mypass
@@ -131,9 +135,12 @@ set-location $BaseFolder
 & .\15_Extended_Events.ps1 $SQLInstance $myuser $mypass
 & .\16_Audits.ps1 $SQLInstance $myuser $mypass
 & .\17_Managed_Backups.ps1 $SQLInstance $myuser $mypass
-& .\01_Server_Startup_Procs.ps1 $SQLInstance $myuser $mypass
+#& .\01_Server_Startup_Procs.ps1 $SQLInstance $myuser $mypass
 #& .\20_DataBase_Objects.ps1 $SQLInstance $myuser $mypass
 
+Write-Output "`r`n"
+$ElapsedTime = ((get-date) - $startTime)
+Write-Output ("$SQLInstance Elapsed time: {0:00}:{1:00}:{2:00}.{3:0000}" -f $ElapsedTime.Hours,$ElapsedTime.Minutes,$ElapsedTime.Seconds, $ElapsedTime.TotalMilliseconds)
 
 set-location $BaseFolder
 exit

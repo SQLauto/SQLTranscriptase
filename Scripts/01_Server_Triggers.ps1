@@ -16,14 +16,12 @@
     ServerName, [SQLUser], [SQLPassword]
 
 .Outputs
-	Server Triggers in .SQL Format
+	
 	
 .NOTES
-    George Walkey
-    Richmond, VA USA
+
 	
 .LINK
-    https://github.com/gwalkey
 
 	
 #>
@@ -38,10 +36,13 @@ Param(
 
 [string]$BaseFolder = (Get-Item -Path ".\" -Verbose).FullName
 
-Import-Module “sqlps” -DisableNameChecking -erroraction SilentlyContinue
 
 #  Script Name
 Write-Host  -f Yellow -b Black "01 - Server Triggers"
+
+# Load SMO Assemblies
+Import-Module ".\LoadSQLSmo.psm1"
+LoadSQLSMO
 
 # assume localhost
 if ($SQLInstance.length -eq 0)

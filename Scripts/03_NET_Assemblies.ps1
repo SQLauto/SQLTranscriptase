@@ -15,17 +15,16 @@
     03_NET_Assemblies.ps1 server01 sa password
 
 .Inputs
-    ServerName\Instance, [SQLUser], [SQLPassword]
+    ServerName, [SQLUser], [SQLPassword]
 
 .Outputs
-	.NET Assemblies in .SQL format
+
 	
 .NOTES
-    George Walkey
-    Richmond, VA USA
+
 	
 .LINK
-    https://github.com/gwalkey
+
 	
 #>
 
@@ -38,6 +37,10 @@ Param(
 [string]$BaseFolder = (Get-Item -Path ".\" -Verbose).FullName
 
 Write-Host  -f Yellow -b Black "03 - .NET Assemblies"
+
+# Load SMO Assemblies
+Import-Module ".\LoadSQLSmo.psm1"
+LoadSQLSMO
 
 # assume localhost
 if ($SQLInstance.length -eq 0)
@@ -79,7 +82,7 @@ try
     }
 
     if($results -ne $null)
-    {        
+    {
         Write-Output ("SQL Version: {0}" -f $results.Column1)
     }
 
@@ -94,10 +97,6 @@ catch
 	exit
 }
 
-
-# Load SQL SMO Assembly
-[System.Reflection.Assembly]::LoadWithPartialName("Microsoft.SqlServer.SMO") | out-null
-[System.Reflection.Assembly]::LoadWithPartialName('Microsoft.SqlServer.SMOExtended') | out-null
 
 # Set Local Vars
 $server 	= $SQLInstance
@@ -196,7 +195,7 @@ foreach($sqlDatabase in $srv.databases)
 }
 
 
-# Return to Base
+# finish
 set-location $BaseFolder
 
 

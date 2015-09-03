@@ -13,17 +13,16 @@
     04_Agent_Alerts.ps1 server01 sa password
 
 .Inputs
-    ServerName\Instance, [SQLUser], [SQLPassword]
+    ServerName, [SQLUser], [SQLPassword]
 
 .Outputs
-	Agent Alerts in .SQL format
+
 	
 .NOTES
-    George Walkey
-    Richmond, VA USA
+
 	
 .LINK
-    https://github.com/gwalkey
+
 	
 #>
 
@@ -36,10 +35,12 @@ Param(
 
 [string]$BaseFolder = (Get-Item -Path ".\" -Verbose).FullName
 
-Import-Module “sqlps” -DisableNameChecking -erroraction SilentlyContinue
-
 #  Script Name
 Write-Host  -f Yellow -b Black "04 - Agent Alerts"
+
+# Load SMO Assemblies
+Import-Module ".\LoadSQLSmo.psm1"
+LoadSQLSMO
 
 # assume localhost
 if ($SQLInstance.length -eq 0)
@@ -51,49 +52,14 @@ if ($SQLInstance.length -eq 0)
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
 {
-    Write-Host -f yellow "Usage: ./04_Agent_Alerts.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
-    Set-Location $BaseFolder
+    Write-host -f yellow "Usage: ./04_Agent_Alerts.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
+       Set-Location $BaseFolder
     exit
 }
 
 
 # Working
 Write-Output "Server $SQLInstance"
-
-# Server connection check
-try
-{
-    $old_ErrorActionPreference = $ErrorActionPreference
-    $ErrorActionPreference = 'SilentlyContinue'
-
-    if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
-    {
-        Write-Output "Testing SQL Auth"
-        $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
-        $serverauth="sql"
-    }
-    else
-    {
-        Write-Output "Testing Windows Auth"
-    	$results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -QueryTimeout 10 -erroraction SilentlyContinue
-        $serverauth = "win"
-    }
-
-    if($results -ne $null)
-    {        
-        Write-Output ("SQL Version: {0}" -f $results.Column1)
-    }
-
-    # Reset default PS error handler
-    $ErrorActionPreference = $old_ErrorActionPreference 	
-
-}
-catch
-{
-    Write-Host -f red "$SQLInstance appears offline - Try Windows Auth?"
-    Set-Location $BaseFolder
-	exit
-}
 
 
  # Get the Alerts Themselves
@@ -111,7 +77,7 @@ FROM msdb.dbo.sysalerts tsha
 "
 
 
-# Get the Notifications for Each Alert (typically Email to an Operator)
+# Get the Notifications for Each Alert (Typically Email)
 $sql2 = 
 "
 select 
@@ -131,85 +97,119 @@ on
 	n.operator_id = o.id
 "
 
-# Create Output folder
 $fullfolderPath = "$BaseFolder\$sqlinstance\04 - Agent Alerts"
 if(!(test-path -path $fullfolderPath))
 {
 	mkdir $fullfolderPath | Out-Null
 }
+
+
 	
-# Turn off default error handler
-$old_ErrorActionPreference = $ErrorActionPreference
-$ErrorActionPreference = 'SilentlyContinue'
-
-
-# Get Alerts
-# Connect Correctly
-if ($serverauth -eq "win")
+# Test for Username/Password needed to connect - else assume WinAuth pass-through
+if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
 {
-    Write-Output "Using Windows Auth"
-    $results1 = Invoke-SqlCmd -query $sql1  -Server $SQLInstance
+	Write-Output "Using SQL Auth"
+
+    $old_ErrorActionPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'SilentlyContinue'
+
+    # Export Alerts
+	$results1 = Invoke-SqlCmd -query $sql1  -Server $SQLInstance –Username $myuser –Password $mypass 
+
+    if ($results1 -eq $null)
+    {
+        Write-Output "No Agent Alerts Found on $SQLInstance"        
+        echo null > "$BaseFolder\$SQLInstance\04 - No Agent Alerts Found.txt"
+        Set-Location $BaseFolder
+        exit
+    }
+
+    New-Item "$fullfolderPath\Agent_Alerts.sql" -type file -force  |Out-Null
+    Add-Content -Value "USE MSDB `r`nGO `r`n" -Path "$fullfolderPath\Agent_Alerts.sql" -Encoding Ascii
+    Foreach ($row in $results1)
+    {
+        $row.column1 | out-file "$fullfolderPath\Agent_Alerts.sql" -Encoding ascii -Append
+    }
+
+    Write-Output ("Exported: {0} Alerts" -f $results1.count)
+
+    # Export Alert Notifications
+	$results2 = Invoke-SqlCmd -query $sql2  -Server $SQLInstance –Username $myuser –Password $mypass 
+
+    if ($results2 -eq $null)
+    {
+        Write-Output "No Agent Alert Notifications Found on $SQLInstance"        
+        echo null > "$BaseFolder\$SQLInstance\04 - No Agent Alert Notifications Found.txt"
+        Set-Location $BaseFolder
+        exit
+    }
+
+    # Reset default PS error handler
+    $ErrorActionPreference = $old_ErrorActionPreference 
+
+    # Export Alert Notifications
+    New-Item "$fullfolderPath\Agent_Alert_Notifications.sql" -type file -force  |Out-Null
+    Add-Content -Value "USE MSDB `r`nGO `r`n" -Path "$fullfolderPath\Agent_Alert_Notifications.sql" -Encoding Ascii
+    Foreach ($row in $results2)
+    {
+        $row.column1 | out-file "$fullfolderPath\Agent_Alert_Notifications.sql" -Encoding ascii -Append
+    }
+
+    Write-Output ("Exported: {0} Alert Notifications" -f $results2.count)
 }
 else
 {
-    Write-Output "Using SQL Auth"
-    $results1 = Invoke-SqlCmd -query $sql1  -Server $SQLInstance –Username $myuser –Password $mypass
-}
+	Write-Output "Using Windows Auth"
 
-if ($results1 -eq $null)
-{
-    Write-Output "No Agent Alerts Found on $SQLInstance"        
-    echo null > "$BaseFolder\$SQLInstance\04 - No Agent Alerts Found.txt"
-    Set-Location $BaseFolder
-    exit
-}
+    $old_ErrorActionPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'SilentlyContinue'
 
-# Export Alerts
-New-Item "$fullfolderPath\Agent_Alerts.sql" -type file -force  |Out-Null
-Add-Content -Value "USE MSDB `r`nGO `r`n" -Path "$fullfolderPath\Agent_Alerts.sql" -Encoding Ascii
-Foreach ($row in $results1)
-{
-    $row.column1 | out-file "$fullfolderPath\Agent_Alerts.sql" -Encoding ascii -Append
-}
+    # Export Alerts
+	$results1 = Invoke-SqlCmd -query $sql1  -Server $SQLInstance
 
+    if ($results1 -eq $null)
+    {
+        Write-Output "No Agent Alerts Found on $SQLInstance"        
+        echo null > "$BaseFolder\$SQLInstance\04 - No Agent Alerts Found.txt"
+        Set-Location $BaseFolder
+        exit
+    }
+
+    New-Item "$fullfolderPath\Agent_Alerts.sql" -type file -force  |Out-Null
+    Add-Content -Value "USE MSDB `r`nGO `r`n" -Path "$fullfolderPath\Agent_Alerts.sql" -Encoding Ascii
+    Foreach ($row in $results1)
+    {
+        $row.column1 | out-file "$fullfolderPath\Agent_Alerts.sql" -Encoding ascii -Append
+    }
     Write-Output ("{0} Alerts Exported" -f $results1.count)
 
 
-# Get Alert Notifications
-# Connect Correctly
-if ($serverauth -eq "win")
-{
-    Write-Output "Using Windows Auth"
-    $results2 = Invoke-SqlCmd -query $sql2  -Server $SQLInstance
+    # Export Alert Notifications
+	$results2 = Invoke-SqlCmd -query $sql2  -Server $SQLInstance
+
+    if ($results2 -eq $null)
+    {
+        Write-Output "No Agent Alert Notifications Found on $SQLInstance"        
+        echo null > "$BaseFolder\$SQLInstance\04 - No Agent Alert Notifications Found.txt"
+        Set-Location $BaseFolder
+        exit
+    }
+
+    # Reset default PS error handler
+    $ErrorActionPreference = $old_ErrorActionPreference 
+
+    # Export Alert Notifications
+    New-Item "$fullfolderPath\Agent_Alert_Notifications.sql" -type file -force  |Out-Null
+    Add-Content -Value "USE MSDB `r`nGO `r`n" -Path "$fullfolderPath\Agent_Alert_Notifications.sql" -Encoding Ascii
+    Foreach ($row in $results2)
+    {
+        $row.column1+"`r`n" | out-file "$fullfolderPath\Agent_Alert_Notifications.sql" -Encoding ascii -Append
+    }
+
+    Write-Output ("{0} Alert Notifications Exported" -f $results2.count)
+
 }
-else
-{
-    Write-Output "Using SQL Auth"
-    $results2 = Invoke-SqlCmd -query $sql2  -Server $SQLInstance –Username $myuser –Password $mypass
-}
-
-$results2 = Invoke-SqlCmd -query $sql2  -Server $SQLInstance –Username $myuser –Password $mypass 
-
-if ($results2 -eq $null)
-{
-    Write-Output "No Agent Alert Notifications Found on $SQLInstance"        
-    echo null > "$BaseFolder\$SQLInstance\04 - No Agent Alert Notifications Found.txt"
-    Set-Location $BaseFolder
-    exit
-}
-
-# Reset default PS error handler
-$ErrorActionPreference = $old_ErrorActionPreference 
-
-# Export Alert Notifications
-New-Item "$fullfolderPath\Agent_Alert_Notifications.sql" -type file -force  |Out-Null
-Add-Content -Value "USE MSDB `r`nGO `r`n" -Path "$fullfolderPath\Agent_Alert_Notifications.sql" -Encoding Ascii
-Foreach ($row in $results2)
-{
-    $row.column1 | out-file "$fullfolderPath\Agent_Alert_Notifications.sql" -Encoding ascii -Append
-}
-
-Write-Output ("Exported: {0} Alert Notifications" -f $results2.count)
-
 
 set-location $BaseFolder
+
+

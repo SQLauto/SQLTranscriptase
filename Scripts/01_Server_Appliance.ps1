@@ -1,6 +1,6 @@
 ﻿<#
 .SYNOPSIS
-    Gets the Hardware/Software Inventory of the target SQL server
+    Gets the Hardware/Software config of the targeted SQL server
 	
 .DESCRIPTION
     This script lists the Hardware and Software installed on the targeted SQL Server
@@ -13,17 +13,16 @@
     01_Server_Appliance.ps1 server01 sa password
 
 .Inputs
-    ServerName\Instance, [SQLUser], [SQLPassword]
+    ServerName, [SQLUser], [SQLPassword]
 
 .Outputs
-	Server Hardware/Software Inventory in txt format
+
 	
 .NOTES
-    George Walkey
-    Richmond, VA USA
+
 	
 .LINK
-    https://github.com/gwalkey
+
 	
 #>
 
@@ -44,7 +43,9 @@ Param(
 
 [string]$BaseFolder = (Get-Item -Path ".\" -Verbose).FullName
 
-Import-Module "sqlps" -DisableNameChecking -erroraction SilentlyContinue
+# Import-Module "sqlps" -DisableNameChecking -erroraction SilentlyContinue
+Import-Module ".\LoadSQLSMO"
+LoadSQLSMO
 
 
 #  Script Name
@@ -54,14 +55,14 @@ Write-Host -f Yellow -b Black "01 - Server Appliance"
 if ($SQLInstance.length -eq 0)
 {
 	Write-Output "Assuming localhost"
-	$SQLInstance = 'localhost'
+	$Sqlinstance = 'localhost'
 }
 
 
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
 {
-    Write-Host -f yellow "Usage: ./01_Server_Appliance.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
+    Write-host -f yellow "Usage: ./01_Server_Appliance.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
     Set-Location $BaseFolder
     exit
 }
@@ -73,38 +74,45 @@ Write-Output "Server $SQLInstance"
 $WinServer = ($SQLInstance -split {$_ -eq "," -or $_ -eq "\"})[0]
 
 # Server connection check
-try
+[string]$serverauth = "win"
+if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
 {
-    $old_ErrorActionPreference = $ErrorActionPreference
-    $ErrorActionPreference = 'SilentlyContinue'
-
-    if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
+	Write-Output "Testing SQL Auth"
+	try
     {
-        Write-Output "Testing SQL Auth"
         $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
-        $serverauth="sql"
-    }
-    else
+        if($results -ne $null)
+        {
+            $myver = $results.Column1
+            Write-Output $myver
+            $serverauth="sql"
+        }	
+	}
+	catch
     {
-        Write-Output "Testing Windows Auth"
-    	$results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -QueryTimeout 10 -erroraction SilentlyContinue
-        $serverauth = "win"
-    }
-
-    if($results -ne $null)
-    {        
-        Write-Output ("SQL Version: {0}" -f $results.Column1)
-    }
-
-    # Reset default PS error handler
-    $ErrorActionPreference = $old_ErrorActionPreference 	
-
+		Write-Host -f red "$SQLInstance appears offline - Try Windows Auth?"
+        Set-Location $BaseFolder
+		exit
+	}
 }
-catch
+else
 {
-    Write-Host -f red "$SQLInstance appears offline - Try Windows Auth?"
-    Set-Location $BaseFolder
-	exit
+	Write-Output "Testing Windows Auth"
+ 	Try
+    {
+        $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -QueryTimeout 10 -erroraction SilentlyContinue
+        if($results -ne $null)
+        {
+            $myver = $results.Column1
+            Write-Output $myver
+        }
+	}
+	catch
+    {
+	    Write-Host -f red "$SQLInstance appears offline - Try SQL Auth?" 
+        set-location $BaseFolder
+	    exit
+	}
 }
 
 # Create folder
@@ -115,35 +123,13 @@ if(!(test-path -path $fullfolderPath))
 }
 
 
-# Load SQL SMO Assemblies  - let me count the ways
-# Original PShell 1/2 method is LoadWithPartialName
-# Works fine in PS 3/4
-[System.Reflection.Assembly]::LoadWithPartialName("Microsoft.SqlServer.SMO") | out-null
-
-# Throws error looking for version 9.0 (2005), unless 2005 is loaded, then it works fine
-# Something to do with how the various libs register the verisons in the Registry
-# Yet there are 3 Ways to do this, while LoadwithPartial only has one syntax (and it seems to work everywhere)
-
-#Add-Type -AssemblyName “Microsoft.SqlServer.Smo”
-#Add-Type –AssemblyName “Microsoft.SqlServer.Smo, Version=12.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91”
-#Add-Type –AssemblyName “Microsoft.SqlServer.SmoExtended, Version=12.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91”
-
-# 2008/R2
-#Add-Type -path "C:\Windows\assembly\GAC_MSIL\Microsoft.SqlServer.Smo\10.0.0.0__89845dcd8080cc91\Microsoft.SqlServer.Smo.dll"
-
-# 2012
-#Add-Type -path “C:\Windows\assembly\GAC_MSIL\Microsoft.SqlServer.Smo\11.0.0.0__89845dcd8080cc91\Microsoft.SqlServer.Smo.dll”
-
-# 2014
-#Add-Type -path “C:\Windows\assembly\GAC_MSIL\Microsoft.SqlServer.Smo\12.0.0.0__89845dcd8080cc91\Microsoft.SqlServer.Smo.dll”
-
-# 2016
-#Add-Type -path “C:\Windows\assembly\GAC_MSIL\Microsoft.SqlServer.Smo\13.0.0.0__89845dcd8080cc91\Microsoft.SqlServer.Smo.dll”
+# Load SMO Assemblies
+Import-Module ".\LoadSQLSmo.psm1"
+LoadSQLSMO
 
 # Set Local Vars
 [string]$server = $SQLInstance
 
-# Create SMO Server Object
 if ($serverauth -eq "win")
 {
     $srv = New-Object "Microsoft.SqlServer.Management.SMO.Server" $server
@@ -157,92 +143,229 @@ else
 }
 
 
-# Create output text file and add first line
-New-Item "$fullfolderPath\Server_Appliance.txt" -type file -force  |Out-Null
-Add-Content -Value "Server Hardware and Software Inventory for $SQLInstance `r`n" -Path "$fullfolderPath\Server_Appliance.txt" -Encoding Ascii
+# Dump info to output file
+$fullFileName = $fullfolderPath+"\Server_Appliance.txt"
+New-Item $fullFileName -type file -force  |Out-Null
+Add-Content -Value "Server Hardware and Software Capabilities for $SQLInstance `r`n" -Path $fullFileName -Encoding Ascii
 
+# SQL
 $mystring =  "Server Name: " +$srv.Name 
-$mystring| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
+$mystring| out-file $fullFileName -Encoding ascii -Append
 
 $mystring =  "SQL Version: " +$srv.Version 
-$mystring| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
+$mystring| out-file $fullFileName -Encoding ascii -Append
 
 $mystring =  "SQL Edition: " +$srv.EngineEdition
-$mystring| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
+$mystring| out-file $fullFileName -Encoding ascii -Append
 
 $mystring =  "SQL Build Number: " +$srv.BuildNumber
-$mystring| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
+$mystring| out-file $fullFileName -Encoding ascii -Append
 
 $mystring =  "SQL Product: " +$srv.Product
-$mystring| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
+$mystring| out-file $fullFileName -Encoding ascii -Append
 
 $mystring =  "SQL Product Level: " +$srv.ProductLevel
-$mystring| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
+$mystring| out-file $fullFileName -Encoding ascii -Append
 
 $mystring =  "SQL Processors: " +$srv.Processors
-$mystring| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
+$mystring| out-file $fullFileName -Encoding ascii -Append
 
 $mystring =  "SQL Max Physical Memory MB: " +$srv.PhysicalMemory
-$mystring| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
+$mystring| out-file $fullFileName -Encoding ascii -Append
 
 $mystring =  "SQL Physical Memory in Use MB: " +$srv.PhysicalMemoryUsageinKB
-$mystring| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
+$mystring| out-file $fullFileName -Encoding ascii -Append
 
 $mystring =  "SQL MasterDB Path: " +$srv.MasterDBPath
-$mystring| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
+$mystring| out-file $fullFileName -Encoding ascii -Append
 
 $mystring =  "SQL MasterDB LogPath: " +$srv.MasterDBLogPath
-$mystring| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
+$mystring| out-file $fullFileName -Encoding ascii -Append
 
 $mystring =  "SQL Backup Directory: " +$srv.BackupDirectory
-$mystring| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
+$mystring| out-file $fullFileName -Encoding ascii -Append
 
 $mystring =  "SQL Install Shared Dir: " +$srv.InstallSharedDirectory
-$mystring| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
+$mystring| out-file $fullFileName -Encoding ascii -Append
 
 $mystring =  "SQL Install Data Dir: " +$srv.InstallDataDirectory
-$mystring| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
+$mystring| out-file $fullFileName -Encoding ascii -Append
 
 $mystring =  "SQL Service Account: " +$srv.ServiceAccount
-$mystring| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
+$mystring| out-file $fullFileName -Encoding ascii -Append
 
-" " | out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
+" " | out-file $fullFileName -Encoding ascii -Append
 
- 
 # Windows
 $mystring =  "OS Version: " +$srv.OSVersion
-$mystring| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
+$mystring| out-file $fullFileName -Encoding ascii -Append
 
 $mystring =  "OS Is Clustered: " +$srv.IsClustered
-$mystring| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
+$mystring| out-file $fullFileName -Encoding ascii -Append
 
 $mystring =  "OS Is HADR: " +$srv.IsHadrEnabled
-$mystring| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
+$mystring| out-file $fullFileName -Encoding ascii -Append
+
+$mystring =  "OS Platform: " +$srv.Platform
+$mystring| out-file $fullFileName -Encoding ascii -Append
+
+
+# Turn off default Error Handler for WMI
+$old_ErrorActionPreference = $ErrorActionPreference
+$ErrorActionPreference = 'SilentlyContinue'
 
 $mystring = Get-WmiObject –class Win32_OperatingSystem -ComputerName $server | select Name, BuildNumber, BuildType, CurrentTimeZone, InstallDate, SystemDrive, SystemDevice, SystemDirectory
-Write-output ("OS Host Name: {0} " -f $mystring.Name)| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
-Write-output ("OS BuildNumber: {0} " -f $mystring.BuildNumber)| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
-Write-output ("OS Buildtype: {0} " -f $mystring.BuildType)| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
-Write-output ("OS CurrentTimeZone: {0}" -f $mystring.CurrentTimeZone)| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
-Write-output ("OS InstallDate: {0} " -f $mystring.InstallDate)| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
-Write-output ("OS SystemDrive: {0} " -f $mystring.SystemDrive)| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
-Write-output ("OS SystemDevice: {0} " -f $mystring.SystemDevice)| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
-Write-output ("OS SystemDirectory: {0} " -f $mystring.SystemDirectory)| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
 
+# Reset default PS error handler
+$ErrorActionPreference = $old_ErrorActionPreference
 
-" " | out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
+if ($mystring -ne $null)
+{
+    Write-output ("OS Host Name: {0} " -f $mystring.Name)| out-file $fullFileName -Encoding ascii -Append
+    Write-output ("OS BuildNumber: {0} " -f $mystring.BuildNumber)| out-file $fullFileName -Encoding ascii -Append
+    Write-output ("OS Buildtype: {0} " -f $mystring.BuildType)| out-file $fullFileName -Encoding ascii -Append
+    Write-output ("OS CurrentTimeZone: {0}" -f $mystring.CurrentTimeZone)| out-file $fullFileName -Encoding ascii -Append
+    Write-output ("OS InstallDate: {0} " -f $mystring.InstallDate)| out-file $fullFileName -Encoding ascii -Append
+    Write-output ("OS SystemDrive: {0} " -f $mystring.SystemDrive)| out-file $fullFileName -Encoding ascii -Append
+    Write-output ("OS SystemDevice: {0} " -f $mystring.SystemDevice)| out-file $fullFileName -Encoding ascii -Append
+    Write-output ("OS SystemDirectory: {0} " -f $mystring.SystemDirectory)| out-file $fullFileName -Encoding ascii -Append
+}
+else
+{
+    Write-output "WMI Call to Win32_OperatingSystem class failed "| out-file $fullFileName -Encoding ascii -Append
+}
+
 
 # Hardware
+# Turn off default Error Handler for WMI
+$old_ErrorActionPreference = $ErrorActionPreference
+$ErrorActionPreference = 'SilentlyContinue'
+
 $mystring = Get-WmiObject -class Win32_Computersystem -ComputerName $server | select manufacturer
-Write-output ("HW Manufacturer: {0} " -f $mystring.Manufacturer)| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
+
+# Reset default PS error handler
+$ErrorActionPreference = $old_ErrorActionPreference
+
+if ($mystring -ne $null)
+{
+    Write-output ("HW Manufacturer: {0} " -f $mystring.Manufacturer)| out-file $fullFileName -Encoding ascii -Append
+}
+else
+{
+    Write-output "WMI Call to Win32_Computersystem class failed "| out-file $fullFileName -Encoding ascii -Append
+}
+
+# Turn off default Error Handler for WMI
+$old_ErrorActionPreference = $ErrorActionPreference
+$ErrorActionPreference = 'SilentlyContinue'
 
 $mystring = Get-WmiObject –class Win32_processor -ComputerName $server | select Name,NumberOfCores,NumberOfLogicalProcessors
-Write-output ("HW Processor: {0} " -f $mystring.Name)| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
-Write-output ("HW CPUs: {0}" -f $mystring.NumberOfLogicalProcessors)| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
-Write-output ("HW Cores: {0}" -f $mystring.NumberOfCores)| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
 
-$mystring =  "`r`nSQL Builds for reference: http://sqlserverbuilds.blogspot.com/ "
-$mystring| out-file "$fullfolderPath\Server_Appliance.txt" -Encoding ascii -Append
+# Reset default PS error handler
+$ErrorActionPreference = $old_ErrorActionPreference
 
-# Return To Base
+if ($mystring -ne $null)
+{
+    Write-output ("HW Processor: {0} " -f $mystring.Name)| out-file $fullFileName -Encoding ascii -Append
+    Write-Output ("HW CPUs: {0}" -f $mystring.NumberOfLogicalProcessors)| out-file $fullFileName -Encoding ascii -Append
+    Write-output ("HW Cores: {0}" -f $mystring.NumberOfCores)| out-file $fullFileName -Encoding ascii -Append
+}
+else
+{
+    Write-output "WMI Call to Win32_processor class failed "| out-file $fullFileName -Encoding ascii -Append
+}
+
+<#
+Use WMI: 2008 doesnt have System Mainboard String in the Log
+$mystring =  $srv.ReadErrorLog(0) | where-object {$_.Text -like "System*"} |select text
+"HW Mainboard/Model: " + $mystring.text | out-file $fullFileName -Encoding ascii -Append
+#>
+
+
+$mystring =  "`r`nSQL Build reference: http://sqlserverbuilds.blogspot.com/ "
+$mystring| out-file $fullFileName -Encoding ascii -Append
+
+$mystring =  "`r`nSQL Build reference: http://sqlserverupdates.com/ "
+$mystring| out-file $fullFileName -Encoding ascii -Append
+
+
+# Dump out loaded DLLs
+$mySQLquery = "select * from sys.dm_os_loaded_modules order by name"
+
+# connect correctly
+if ($serverauth -eq "win")
+{
+    $sqlresults = Invoke-SqlCmd -ServerInstance $SQLInstance -Query $mySQLquery -QueryTimeout 10 -erroraction SilentlyContinue
+}
+else
+{
+    $sqlresults = Invoke-SqlCmd -ServerInstance $SQLInstance -Query $mySQLquery -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
+}
+
+# Create some CSS for help in column formatting during HTML exports
+$myCSS = 
+"
+table
+    {
+        Margin: 0px 0px 0px 4px;
+        Border: 1px solid rgb(190, 190, 190);
+        Font-Family: Tahoma;
+        Font-Size: 9pt;
+        Background-Color: rgb(252, 252, 252);
+    }
+tr:hover td
+    {
+        Background-Color: rgb(150, 150, 220);
+        Color: rgb(255, 255, 255);
+    }
+tr:nth-child(even)
+    {
+        Background-Color: rgb(242, 242, 242);
+    }
+th
+    {
+        Text-Align: Left;
+        Color: rgb(150, 150, 220);
+        Padding: 1px 4px 1px 4px;
+    }
+td
+    {
+        Vertical-Align: Top;
+        Padding: 1px 4px 1px 4px;
+    }
+"
+# CSS file
+if(!(test-path -path "$fullfolderPath\HTMLReport.css"))
+{
+    $myCSS | out-file "$fullfolderPath\HTMLReport.css" -Encoding ascii    
+}
+
+$sqlresults | select file_version, product_version, debug, patched, prerelease, private_build, special_build, language, company, description, name `
+| ConvertTo-Html  -PreContent "<h1>$SqlInstance</H1><H2>Loaded DLLs</h2>" -CSSUri "HtmlReport.css" | Set-Content "$fullfolderPath\02_Loaded_Dlls.html"
+
+
+# Dump Trace Flags
+$mySQLquery2= "dbcc tracestatus()"
+
+# connect correctly
+if ($serverauth -eq "win")
+{
+    $sqlresults2 = Invoke-SqlCmd -ServerInstance $SQLInstance -Query $mySQLquery2 -QueryTimeout 10 -erroraction SilentlyContinue
+}
+else
+{
+    $sqlresults2 = Invoke-SqlCmd -ServerInstance $SQLInstance -Query $mySQLquery2 -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
+}
+
+if ($sqlresults2 -eq  $null)
+{
+    
+}
+else
+{
+    $sqlresults2 | select TraceFlag, Status, Global, Session | ConvertTo-Html -PreContent "<h1>$SqlInstance</H1><H2>Trace Flags</h2>"  -CSSUri "HtmlReport.css" | Set-Content "$fullfolderPath\03_Trace_Flags.html"
+}
+
+
+# Return to Base
 set-location $BaseFolder

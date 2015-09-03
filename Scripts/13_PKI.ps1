@@ -16,25 +16,23 @@
 .EXAMPLE
     13_PKI.ps1 server01 sa password
 
-.Inputs
-    ServerName\Instance, [SQLUser], [SQLPassword]
-
-.Outputs
-	PKI Objects txt, pvk, cer formats
-
 .NOTES
-    This code CANNOT Script Out PKI Keys and Certs signed with passwords, unless you know the password and OPEN the Key/Cert first!
+    This CANNOT Script Out Keys and Certs signed with passwords, unless you know the password and OPEN the Key/Cert first
     AKA, you will need to hard code that, or add a parameter to this script...
     Most Keys/Certs are signed with the Service Master Key, not the Database Master Key
 
     Once the Database Master Key is restored, the Syms and ASyms are restored (because they live in the database)
-    AKA, MS has no export routine for Sym/ASym keys - there is no need
+    AKA, MS has no export routine for Sym/ASym keys
 
-    George Walkey
-    Richmond, VA USA
+
+.Inputs
+    ServerName, [SQLUser], [SQLPassword]
+
+.Outputs
+
 
 .LINK
-    https://github.com/gwalkey
+
 #>
 
 Param(
@@ -48,6 +46,11 @@ Param(
 
 Write-Host  -f Yellow -b Black "13 - PKI (Master keys, Asym Keys, Sym Keys, Certificates)"
 
+# Load SMO Assemblies
+Import-Module ".\LoadSQLSmo.psm1"
+LoadSQLSMO
+
+
 # assume localhost
 if ($SQLInstance.length -eq 0)
 {
@@ -55,11 +58,10 @@ if ($SQLInstance.length -eq 0)
 	$SQLInstance = 'localhost'
 }
 
-
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
 {
-    Write-host -f yellow "Usage: ./13_PKI.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ/SQL Auth machine)"
+    Write-Host -f yellow "Usage: ./13_PKI.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ/SQL Auth machine)"
     Set-Location $BaseFolder
     exit
 }
@@ -68,8 +70,6 @@ if ($SQLInstance.Length -eq 0)
 # Working
 Write-Output "Server $SQLInstance"
 
-
-import-module "sqlps" -DisableNameChecking -erroraction SilentlyContinue
 
 # Server connection check
 try
@@ -91,7 +91,7 @@ try
     }
 
     if($results -ne $null)
-    {        
+    {
         Write-Output ("SQL Version: {0}" -f $results.Column1)
     }
 
@@ -107,12 +107,6 @@ catch
 }
 
 
-
-# Load SMO asemblies
-[System.Reflection.Assembly]::LoadWithPartialName('Microsoft.SqlServer.SMO') | out-null
-
-
-# Get this SQL Instance's default backup folder, we ASSUME we have rights to write there, right?
 if ($serverauth -eq "win")
 {
     $srv = New-Object ('Microsoft.SqlServer.Management.Smo.Server') $SQLInstance
@@ -127,14 +121,14 @@ else
     $backupfolder = $srv.Settings.BackupDirectory
 }
 
-# if the Backup folder is a UNC path, use it 
+# if a UNC path, use it 
 $unc = 0
 if ($backupfolder -like "*\\*")
 {
     $unc = 1
 }
 
-# Export PKI Objects 
+# Dump PKI Objects 
 # Write to default backup folder on host
 $PKI_Path = "$BaseFolder\$SQLInstance\13 - PKI\"
 if(!(test-path -path $PKI_path))
@@ -142,7 +136,7 @@ if(!(test-path -path $PKI_path))
     mkdir $PKI_path | Out-Null	
 }
 
-Write-Output "SQL Backup folder is $backupfolder"
+Write-Output "Backup folder is $backupfolder"
 
 # -------------------------------------
 # 1) Service Master Key - Server Level
@@ -168,7 +162,7 @@ else
 # copy-item fails if your powershell "location" is SQLSERVER:
 set-location $BaseFolder
 
-# Get Windows Server name separate from the SQL instance
+#Get Windows Server name separate from the SQL instance
 if ($SQLInstance.IndexOf('\') -gt 0)
 {
     $SQLInstance2 = $SQLInstance.Substring(0,$sqlinstance.IndexOf('\'))
@@ -211,7 +205,6 @@ else
 	$old_ErrorActionPreference = $ErrorActionPreference
 	$ErrorActionPreference = 'SilentlyContinue'
 
-    # Leave no trace on server
     if (!(test-path $src))
     {
         Write-Output "Cant connect to $src"
@@ -219,6 +212,7 @@ else
     else
     {
         copy-item $src "$PKI_Path"
+        # Leave no trace on server
         remove-item $src -ErrorAction SilentlyContinue
     }
 	
@@ -255,7 +249,7 @@ foreach($sqlDatabase in $srv.databases)
 	    select 0
     end   
     "
-    # Connect correctly
+    # connect correctly
 	if ($serverauth -eq "win")
 	{
 		$sqlresults2 = Invoke-SqlCmd -ServerInstance $SQLInstance -Query $mySQLquery -QueryTimeout 10 -erroraction SilentlyContinue
@@ -271,6 +265,7 @@ foreach($sqlDatabase in $srv.databases)
     # Tell User
     Write-Output "Exporting DB Master for $fixedDBName"
     
+
     #Create output folder
     $output_path = $PKI_Path+$fixedDBName
     if(!(test-path -path $output_path))
@@ -285,7 +280,10 @@ foreach($sqlDatabase in $srv.databases)
     backup master key to file = N'$myExportedDBMasterKeyName'
 	encryption by password = '3dH85Hhk003#GHkf02597gheij04'
     "
-    # Connect correctly
+
+    #Write-Output "SQL Backup Command is: "$mySQLquery
+
+    # connect correctly
 	if ($serverauth -eq "win")
 	{
 		$sqlresults = Invoke-SqlCmd -ServerInstance $SQLInstance -Query $mySQLquery -QueryTimeout 10 -erroraction SilentlyContinue
@@ -296,7 +294,7 @@ foreach($sqlDatabase in $srv.databases)
 	}
 
 	
-    # copy-item wil fail if your PShell location is still SQLSERVER:
+    # copy-item fails if your location is SQLSERVER:
     set-location $BaseFolder
 
     # Fixup output folder if the backup folder is a UNC path
@@ -337,6 +335,8 @@ foreach($sqlDatabase in $srv.databases)
 	   
         if(test-path -path $src)
         {
+            #Write-Output "src: "$src
+            #Write-Output "output_path:"$output_path
             copy-item $src "$output_path"
             remove-item $src -ErrorAction SilentlyContinue
         }   
@@ -488,7 +488,7 @@ if ($sqlresults22.Column1 -eq 1)
         }
 
         
-        # Process *.PVK Private Key files
+        # Process *.PVK Files
         # localhost and this script on same box, C:\ is OK
         if ($SQLInstance -eq "localhost")
         {
@@ -520,6 +520,7 @@ if ($sqlresults22.Column1 -eq 1)
 
 # If any Certs Found
 } 
+
 
 set-location $BaseFolder
 

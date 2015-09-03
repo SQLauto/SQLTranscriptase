@@ -18,18 +18,18 @@
 .EXAMPLE
     14_Service_Broker.ps1 server01 sa password
 
+
 .Inputs
-    ServerName\Instance, [SQLUser], [SQLPassword]
+    ServerName, [SQLUser], [SQLPassword]
 
 .Outputs
-	Service Broker Objects in .SQL format
+
 	
 .NOTES
-    George Walkey
-    Richmond, VA USA
+
 	
 .LINK
-    https://github.com/gwalkey
+
 	
 #>
 
@@ -45,18 +45,22 @@ Param(
 
 Write-Host  -f Yellow -b Black "14 - Service Broker"
 
+# Load SMO Assemblies
+Import-Module ".\LoadSQLSmo.psm1"
+LoadSQLSMO
+
+
 # assume localhost
 if ($SQLInstance.length -eq 0)
 {
 	Write-Output "Assuming localhost"
-	$Sqlinstance = 'localhost'
+	$SQLInstance = 'localhost'
 }
-
 
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
 {
-    Write-Host -f yellow "Usage: ./14_Service_Broker.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
+    Write-host -f yellow "Usage: ./14_Service_Broker.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
     Set-Location $BaseFolder
     exit
 }
@@ -86,7 +90,7 @@ try
     }
 
     if($results -ne $null)
-    {        
+    {
         Write-Output ("SQL Version: {0}" -f $results.Column1)
     }
 
@@ -125,18 +129,12 @@ function CopyObjectsToFiles($objects, $outDir) {
 }
 
 
-
-# Load SQL SMO Assembly
-[System.Reflection.Assembly]::LoadWithPartialName("Microsoft.SqlServer.SMO") | out-null
-[System.Reflection.Assembly]::LoadWithPartialName('Microsoft.SqlServer.SMOExtended') | out-null
-
 # Set Local Vars
 $server = $SQLInstance
-[bool]$anyfound = $false
 
 if ($serverauth -eq "win")
 {
-    $srv    = New-Object "Microsoft.SqlServer.Management.SMO.Server" $server
+    $srv   = New-Object "Microsoft.SqlServer.Management.SMO.Server" $server
     $scripter 	= New-Object ("Microsoft.SqlServer.Management.SMO.Scripter") ($server)
 }
 else
@@ -276,7 +274,7 @@ foreach($sqlDatabase in $srv.databases)
         }
         catch
         {
-            #Write-Host "Skipping system queue $strmyBrokerMsgTypeName"
+            #Write-Output "Skipping system queue $strmyBrokerMsgTypeName"
         }
     }
 
@@ -337,6 +335,6 @@ if ($anyfound-eq $true)
 
 
 
-# Return to Base
+# finish
 set-location $BaseFolder
 

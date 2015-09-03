@@ -1,11 +1,11 @@
 ﻿<#
 .SYNOPSIS
-    Gets the SQL Server Credential Objects from the target server
+    Gets the SQL Server Credentials on the target server
 	
 .DESCRIPTION
    Writes the SQL Server Credentials out to the "01 - Server Credentials" folder
    One file per Credential
-   Credentials are used for PKI, TDE, Replication, Azure Connections, Remote Server connections for Agent Proxies or Database Synonyms
+   Credentials are used for PKI, TDE, Replication, Azure Connections, Remote Server connections for Agent Proxies or Database Synonyms   
    
 .EXAMPLE
     01_Server_Credentials.ps1 localhost
@@ -14,17 +14,16 @@
     01_Server_Credentials.ps1 server01 sa password
 
 .Inputs
-    ServerName\Instance, [SQLUser], [SQLPassword]
+    ServerName, [SQLUser], [SQLPassword]
 
 .Outputs
-	Server Credential Objects in .SQL format
+
 	
 .NOTES
-    George Walkey
-    Richmond, VA USA
+
 	
 .LINK
-    https://github.com/gwalkey
+
 	
 #>
 
@@ -45,10 +44,11 @@ if ($SQLInstance.length -eq 0)
 	Write-Output "Assuming localhost"
 	$Sqlinstance = 'localhost'
 }
+
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
 {
-    Write-Host -f yellow "Usage: ./01_Server_Credentials.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
+    Write-host -f yellow "Usage: ./01_Server_Credentials.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
     Set-Location $BaseFolder
     exit
 }
@@ -58,6 +58,11 @@ Write-Output "Server $SQLInstance"
 
 # fix target servername if given a SQL named instance
 $WinServer = ($SQLInstance -split {$_ -eq "," -or $_ -eq "\"})[0]
+
+# Load SMO Assemblies
+Import-Module ".\LoadSQLSmo.psm1"
+LoadSQLSMO
+
 
 # Server connection check
 try
@@ -85,6 +90,7 @@ try
 
     # Reset default PS error handler
     $ErrorActionPreference = $old_ErrorActionPreference 	
+
 }
 catch
 {
@@ -93,14 +99,10 @@ catch
 	exit
 }
 
-
-# Load SQL SMO Assembly
-[System.Reflection.Assembly]::LoadWithPartialName("Microsoft.SqlServer.SMO") | out-null
-
 # Set Local Vars
 $server = $SQLInstance
 
-# Create SMO Object
+
 if ($serverauth -eq "win")
 {
     $srv = New-Object "Microsoft.SqlServer.Management.SMO.Server" $server
@@ -113,7 +115,10 @@ else
     $srv.ConnectionContext.set_Password($mypass)
 }
 
-# Output folder
+
+
+
+# Dump Server Credentials
 Write-Output "$SQLInstance - Credentials"
 $Credentials_path  = "$BaseFolder\$SQLInstance\01 - Server Credentials\"
 if(!(test-path -path $Credentials_path))
@@ -121,15 +126,11 @@ if(!(test-path -path $Credentials_path))
     mkdir $Credentials_path | Out-Null	
 }
 
-$mySQLquery = 
-"USE master; 
-
-SELECT
-    credential_id, name, credential_identity, create_date, modify_date, target_type, target_id
+$mySQLquery = "USE master; SELECT `
+credential_id, name, credential_identity, create_date, modify_date, target_type, target_id
 FROM
-    sys.credentials
-order by 
-    1
+sys.credentials
+order by 1
 "
 
 # connect correctly
@@ -142,9 +143,8 @@ else
     $sqlresults = Invoke-SqlCmd -ServerInstance $SQLInstance -Query $mySQLquery -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
 }
 
-# Send each Object to the output file
+# Output to file
 foreach ($Cred in $sqlresults)
-	# Fixup characters that make for bad filenames
 {   $myFixedCredName = $Cred.name.replace('\','_')
 	$myFixedCredName = $myFixedCredName.replace('/', '-')
 	$myFixedCredName = $myFixedCredName.replace('[','(')
@@ -156,7 +156,9 @@ foreach ($Cred in $sqlresults)
     $myoutputstring | out-file -FilePath $myoutputfile -append -encoding ascii -width 500
 }
 
-Write-Host ("{0} Credentials Exported"  -f $sqlresults.Count)
 
-# Return to Base
+# finish
 set-location $BaseFolder
+
+
+

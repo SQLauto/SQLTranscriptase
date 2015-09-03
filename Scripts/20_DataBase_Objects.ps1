@@ -4,7 +4,7 @@
 
 .DESCRIPTION
 	Writes the Objects out into subfolders in the "20 - DataBase Objects" folder
-	Scripted-Out Objects include:
+	Scripted Objects include:
     Database definition with Files and Filegroups
 	DataBase Triggers
 	Filegroups
@@ -26,17 +26,17 @@
 .EXAMPLE
     20_DataBase_Objects.ps1 server01 sa password
 
+.EXAMPLE
+    20_Database_Objects.ps1 localhost -myDatabase AdventureWorks2014
+
 .Inputs
-    ServerName, [SQLUser], [SQLPassword]
+    ServerName, [SQLUser], [SQLPassword], [myDatabase]
 
 .Outputs
-	All Database Objects in .SQL format
-	
+
 .NOTES
-    George Walkey
-    Richmond, VA USA
+
 .LINK
-  https://github.com/gwalkey
 
 	
 #>
@@ -53,7 +53,9 @@ Param(
 
 Write-Host  -f Yellow -b Black "20 - DataBase Objects (Triggers, Tables, Views, Procs, UDFs, FullTextCats, TableTypes, Schemas)"
 
-
+# Load SMO Assemblies
+Import-Module ".\LoadSQLSmo.psm1"
+LoadSQLSMO
 
 
 # Usage Check
@@ -129,12 +131,10 @@ function CopyObjectsToFiles($objects, $outDir) {
 			$scripter.Options.FileName = $outDir + $schemaPrefix + $fixedOName + ".sql"
             try
             {
-                # Switch to using SDK.SFC Assembly and the Sdk.Sfc.Urn Object to get the Filegroups clause on Tables and Indexes
-				# The NoFileGroup option on the regular SMO object is broken - see Connect item below
-				# $Scripter.EnumScript($o)
+                #Write-Output "Break here Jester"
                 $urn = new-object Microsoft.SQlserver.Management.sdk.sfc.urn($o.Urn);
                 $scripter.Script($urn)
-			    
+			    #$scripter.EnumScript($o)
             }
             catch
             {
@@ -144,29 +144,6 @@ function CopyObjectsToFiles($objects, $outDir) {
 		}
 	}
 }
-
-
-
-# Load SQL SMO Assembly - Various ways
-# http://www.maxtblog.com/2011/07/sql-server-smo-loading-assemblies-gotcha%E2%80%99s/
-
-# 1 - PS v1 - Works
-[System.Reflection.Assembly]::LoadWithPartialName("Microsoft.SqlServer.SMO") | out-null
-[System.Reflection.Assembly]::LoadWithPartialName("Microsoft.SqlServer.SmoEnum") | out-null
-[System.Reflection.Assembly]::LoadWithPartialName("Microsoft.SqlServer.Management.Sdk.Sfc") | out-null
-
-# 2 - Works
-# Add-Type -AssemblyName “Microsoft.SqlServer.Smo”
-# Add-Type -AssemblyName “Microsoft.SqlServer.SmoExtended”
-
-# 3 - Works
-# Add-Type –AssemblyName “Microsoft.SqlServer.Smo, Version=12.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91”
-
-# 4 - SQL Install Folder
-# Add-Type -Path 'C:\Program Files\Microsoft SQL Server\120\SDK\Assemblies\Microsoft.SqlServer.Smo.dll'
-
-# 5 - GAC hardcoded path
-# Add-Type -path “C:\Windows\assembly\GAC_MSIL\Microsoft.SqlServer.Smo\12.0.0.0__89845dcd8080cc91\Microsoft.SqlServer.Smo.dll”
 
 
 # Set Local Vars
@@ -190,7 +167,7 @@ else
 #$db 	= New-Object ("Microsoft.SqlServer.Management.SMO.Database")
 #$tbl	= New-Object ("Microsoft.SqlServer.Management.SMO.Table")
 
-# Set Speed-up trick
+# Set Speed=On trick - doesnt work on Scripting - But thanks for the tip MVP Ben Miller
 # $tbl.SetDefaultInitFields([Microsoft.SqlServer.Management.SMO.Table], "CreateDate")
 
 
@@ -252,7 +229,7 @@ $scripter.Options.ToFileOnly 			= $true
 $scripter.Options.WithDependencies		= $false # Leave OFF - creates issues
 $scripter.Options.XmlIndexes            = $true
 
-# Live Dangerously - export your data (in TEXT FORM!)
+# If you want to live Dangerously - YES, you can export your data one INSERT statement at a time....It will be BIG
 $scripter.Options.ScriptData            = $false
 
 # -----------------------
@@ -322,11 +299,32 @@ foreach($sqlDatabase in $srv.databases)
         mkdir $DBSettingsPath | Out-Null	
     }
 
+
     # Export Main Database Itself with Files and FileGroups
     Write-Output "$fixedDBName - Database"
-
     $MainDB = $db  | Where-object  { -not $_.IsSystemObject  }
     CopyObjectsToFiles $MainDB $DB_Path
+
+    # Create Database Object Reconstruction Order Hints File
+    "Database Object Reconstruction Order" | out-file "$output_path\Database_Reconstruction_Order.txt" -Encoding ascii -Append
+    "`n " | out-file "$output_path\Database_Reconstruction_Order.txt" -Encoding ascii -Append
+    "01) Database with Filegroups" | out-file "$output_path\Database_Reconstruction_Order.txt" -Encoding ascii -Append
+    "02) .NET Assemblies" | out-file "$output_path\Database_Reconstruction_Order.txt" -Encoding ascii -Append
+    "03) Linked Servers" | out-file "$output_path\Database_Reconstruction_Order.txt" -Encoding ascii -Append    
+    "04) Logins" | out-file "$output_path\Database_Reconstruction_Order.txt" -Encoding ascii -Append    
+    "05) Sequences" | out-file "$output_path\Database_Reconstruction_Order.txt" -Encoding ascii -Append
+    "06) Synonyms" | out-file "$output_path\Database_Reconstruction_Order.txt" -Encoding ascii -Append
+    "07) Schemas" | out-file "$output_path\Database_Reconstruction_Order.txt" -Encoding ascii -Append
+    "08) UDFs (Table-Valued and Scalar Functions)" | out-file "$output_path\Database_Reconstruction_Order.txt" -Encoding ascii -Append
+    "09) User-Defined Table Types" | out-file "$output_path\Database_Reconstruction_Order.txt" -Encoding ascii -Append
+    "10) Tables" | out-file "$output_path\Database_Reconstruction_Order.txt" -Encoding ascii -Append
+    "11) Views" | out-file "$output_path\Database_Reconstruction_Order.txt" -Encoding ascii -Append
+    "12) Stored Procedures" | out-file "$output_path\Database_Reconstruction_Order.txt" -Encoding ascii -Append
+    "13) Full-Text Catalogs" | out-file "$output_path\Database_Reconstruction_Order.txt" -Encoding ascii -Append
+    "14) Table Triggers" | out-file "$output_path\Database_Reconstruction_Order.txt" -Encoding ascii -Append
+    "15) Database Triggers" | out-file "$output_path\Database_Reconstruction_Order.txt" -Encoding ascii -Append
+    
+
 
     # Create some CSS for help in column formatting
     $myCSS = 
@@ -365,21 +363,6 @@ foreach($sqlDatabase in $srv.databases)
    
     # Export DB Settings
     Write-Output "$fixedDBName - Settings"
-    <#
-    New-Item "$DBSettingsPath\Database_Settings.txt" -type file -force  |Out-Null
-    [int]$i = 0
-    [int]$mypropcount = $db.Properties.Count
-    $myproperties = $db.Properties |Sort-Object -Property name
-    [string[]]$mypropname = @()
-    [string[]]$mypropval  = @()
-    for($i=0; $i -le $mypropcount; $i++)
-    {
-        $mypropname+= $myproperties[$i].name
-        $mypropval+=  $myproperties[$i].Value
-        $mypropname[$i]+": "+$mypropval[$i] | out-file "$DBSettingsPath\Database_Settings.txt" -Encoding ascii -Append
-    }
-    #>
-
     $mySettings = $db.Properties
     $mySettings | sort-object Name | select Name, Value | ConvertTo-Html  -CSSUri "$DBSettingsPath\HTMLReport.css"| Set-Content "$DBSettingsPath\HtmlReport.html"
     

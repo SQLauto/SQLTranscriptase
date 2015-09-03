@@ -13,17 +13,16 @@
     01_Server_Logins.ps1 server01 sa password
 
 .Inputs
-    ServerName\Instance, [SQLUser], [SQLPassword]
+    ServerName, [SQLUser], [SQLPassword]
 
 .Outputs
-	Server Logins in .SQL format
+
 	
 .NOTES
-    George Walkey
-    Richmond, VA USA
+
 	
 .LINK
-    https://github.com/gwalkey
+
 	
 #>
 
@@ -35,7 +34,11 @@ Param(
 
 [string]$BaseFolder = (Get-Item -Path ".\" -Verbose).FullName
 
-Import-Module "sqlps" -DisableNameChecking -erroraction SilentlyContinue
+# Load SMO Assemblies
+Import-Module ".\LoadSQLSmo.psm1"
+LoadSQLSMO
+
+
 
 #  Script Name
 Write-Host  -f Yellow -b Black "01 - Server Logins"
@@ -50,7 +53,7 @@ if ($SQLInstance.length -eq 0)
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
 {
-    Write-Host -f yellow "Usage: ./01_Server_Logins.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
+    Write-host -f yellow "Usage: ./01_Server_Logins.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
     Set-Location $BaseFolder
     exit
 }
@@ -94,7 +97,6 @@ catch
 }
 
 
-
 function CopyObjectsToFiles($objects, $outDir) {
 	
 	if (-not (Test-Path $outDir)) {
@@ -117,11 +119,6 @@ function CopyObjectsToFiles($objects, $outDir) {
 		}
 	}
 }
-
-
-# Load SQL SMO Assemblies
-[System.Reflection.Assembly]::LoadWithPartialName("Microsoft.SqlServer.SMO") | out-null
-[System.Reflection.Assembly]::LoadWithPartialName("Microsoft.SqlServer.SmoExtended") | out-null
 
 # Set Local Vars
 $server = $SQLInstance
@@ -189,7 +186,7 @@ $scripter.Options.SchemaQualifyForeignKeysReferences = $true
 $scripter.Options.ToFileOnly 			= $true
 
 
-# With Dependencies creates one huge file for all tables in the order needed to maintain RefIntegrity
+# With Dependencies create one huge file for all tables in the order needed to maintain RefIntegrity
 $scripter.Options.WithDependencies		= $false
 $scripter.Options.XmlIndexes            = $true
 
@@ -201,14 +198,15 @@ if(!(test-path -path $output_path))
         mkdir $output_path | Out-Null
     }
 
+#Export Logins
+[string[]]$bogus_logins = '##MS_PolicyEventProcessingLogin##', '##MS_PolicyTsqlExecutionLogin##', '##MS_SQLEnableSystemAssemblyLoadingUser##','##MS_SSISServerCleanupJobLogin##'
+$logins_path  = "$BaseFolder\$SQLInstance\01 - Server Logins\"
 
 # Ignore special SQL Logins
-[string[]]$bogus_logins = '##MS_PolicyEventProcessingLogin##', '##MS_PolicyTsqlExecutionLogin##', '##MS_SQLEnableSystemAssemblyLoadingUser##', '##MS_SSISServerCleanupJobLogin##'
 #$logins = $srv.Logins | Where-Object -FilterScript {$_.Name -notin $bogus_logins}
 
-$logins_path  = "$BaseFolder\$SQLInstance\01 - Server Logins\"
 $logins = $srv.Logins
 CopyObjectsToFiles $logins $logins_path
  
-# Return to Base
+
 set-location $BaseFolder

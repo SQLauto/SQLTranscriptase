@@ -14,17 +14,15 @@
     02_Linked_Servers.ps1 server01 sa password
 
 .Inputs
-    ServerName\Instance, [SQLUser], [SQLPassword]
+    ServerName, [SQLUser], [SQLPassword]
 
 .Outputs
-	Linked Servers in .SQL format
 
 .NOTES
-    George Walkey
-    Richmond, VA USA
+
 	
 .LINK
-    https://github.com/gwalkey
+
 
 #>
 
@@ -37,10 +35,13 @@ Param(
 
 [string]$BaseFolder = (Get-Item -Path ".\" -Verbose).FullName
 
-Import-Module “sqlps” -DisableNameChecking -erroraction SilentlyContinue
 
 #  Script Name
 Write-Host  -f Yellow -b Black "02 - Linked Servers"
+
+# Load SMO Assemblies
+Import-Module ".\LoadSQLSmo.psm1"
+LoadSQLSMO
 
 # assume localhost
 if ($SQLInstance.length -eq 0)
@@ -49,12 +50,11 @@ if ($SQLInstance.length -eq 0)
 	$Sqlinstance = 'localhost'
 }
 
-
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
 {
     Write-host -f yellow "Usage: ./02_Linked_Servers.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
-    Set-Location $BaseFolder
+      Set-Location $BaseFolder
     exit
 }
 
@@ -63,39 +63,28 @@ if ($SQLInstance.Length -eq 0)
 Write-Output "Server $SQLInstance"
 
 
-# Server connection check
-try
-{
-    $old_ErrorActionPreference = $ErrorActionPreference
-    $ErrorActionPreference = 'SilentlyContinue'
 
-    if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
-    {
-        Write-Output "Testing SQL Auth"
-        $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
-        $serverauth="sql"
-    }
-    else
-    {
-        Write-Output "Testing Windows Auth"
-    	$results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -QueryTimeout 10 -erroraction SilentlyContinue
-        $serverauth = "win"
-    }
-
-    if($results -ne $null)
-    {        
-        Write-Output ("SQL Version: {0}" -f $results.Column1)
-    }
-
-    # Reset default PS error handler
-    $ErrorActionPreference = $old_ErrorActionPreference 	
-
-}
-catch
-{
-    Write-Host -f red "$SQLInstance appears offline - Try Windows Auth?"
-    Set-Location $BaseFolder
-	exit
+function CopyObjectsToFiles($objects, $outDir) {
+	
+	if (-not (Test-Path $outDir)) {
+		[System.IO.Directory]::CreateDirectory($outDir) | out-null
+	}
+	
+	foreach ($o in $objects) { 
+	
+		if ($o -ne $null) {
+			
+			$schemaPrefix = ""
+			
+			if ($o.Schema -ne $null -and $o.Schema -ne "") {
+				$schemaPrefix = $o.Schema + "."
+			}
+		
+			$fixedOName = $o.name.replace('\','_')			
+			$scripter.Options.FileName = $outDir + $schemaPrefix + $fixedOName + ".sql"			
+			$scripter.EnumScript($o)
+		}
+	}
 }
 
 
@@ -106,7 +95,7 @@ if(!(test-path -path $fullfolderPath))
     mkdir $fullfolderPath | Out-Null
 }
 
-# Delete pre-existing negative status file
+# Delete pre-existing negative file
 if(test-path -path "$BaseFolder\$SQLInstance\02 - No Linked Servers Found.txt")
 {
     Remove-Item "$BaseFolder\$SQLInstance\02 - No Linked Servers Found.txt"
@@ -115,7 +104,7 @@ if(test-path -path "$BaseFolder\$SQLInstance\02 - No Linked Servers Found.txt")
 $server = $SQLInstance
 $LinkedServers_path	= $fullfolderPath+"\Linked_Servers.sql"
 
-# Connect Correctly
+# Test for Username/Password needed to connect - else assume WinAuth passthrough
 if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
 {
 	Write-Output "Using Sql Auth"
@@ -126,8 +115,9 @@ if ($mypass.Length -ge 1 -and $myuser.Length -ge 1)
     $srv.ConnectionContext.set_Password($mypass)
     $scripter = New-Object ("Microsoft.SqlServer.Management.SMO.Scripter") ($srv)
 
-    # Script out 
-    $srv.LinkedServers | foreach {$_.Script()+ "GO"} | Out-File  $LinkedServers_path
+    # Script out
+    $LinkedServers = $srv.LinkedServers 
+    #CopyObjectsToFiles $LinkedServers $LinkedServers_path
 
 }
 else
@@ -138,11 +128,13 @@ else
     $scripter 	= New-Object ("Microsoft.SqlServer.Management.SMO.Scripter") ($server)
 
     # Script Out
+    $LinkedServers = $srv.LinkedServers 
+    #CopyObjectsToFiles $LinkedServers $LinkedServers_path
     $srv.LinkedServers | foreach {$_.Script()+ "GO"} | Out-File  $LinkedServers_path
+
 
 }
 
-# Return to Base
 set-location $BaseFolder
 
 

@@ -13,17 +13,16 @@
     01_Server_Roles.ps1 server01 sa password
 
 .Inputs
-    ServerName\Instance, [SQLUser], [SQLPassword]
+    ServerName, [SQLUser], [SQLPassword]
 
 .Outputs
-	Fixed Server Roles in HTML format
+	HTML Files
 	
 .NOTES
-    George Walkey
-    Richmond, VA USA
+
 	
 .LINK
-    https://github.com/gwalkey
+
 	
 #>
 
@@ -36,12 +35,16 @@ Param(
 
 [string]$BaseFolder = (Get-Item -Path ".\" -Verbose).FullName
 
-Import-Module "sqlps" -DisableNameChecking -erroraction SilentlyContinue
 
 Set-Location $BaseFolder
 
 #  Script Name
 Write-Host  -f Yellow -b Black "01 - Server Roles"
+
+# Load SMO Assemblies
+Import-Module ".\LoadSQLSmo.psm1"
+LoadSQLSMO
+
 
 # assume localhost
 if ($SQLInstance.length -eq 0)
@@ -53,7 +56,7 @@ if ($SQLInstance.length -eq 0)
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
 {
-    Write-Host -f yellow -b black "Usage: ./01_Server_Roles.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
+    Write-host -f yellow -b black "Usage: ./01_Server_Roles.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
     Set-Location $BaseFolder
     exit
 }
@@ -83,7 +86,7 @@ try
     }
 
     if($results -ne $null)
-    {        
+    {
         Write-Output ("SQL Version: {0}" -f $results.Column1)
     }
 
@@ -97,7 +100,6 @@ catch
     Set-Location $BaseFolder
 	exit
 }
-
 
 
 # Create Output Folder
@@ -202,7 +204,6 @@ else
 }
 
 # Write out rows
-$results | select security_type, security_entity, principal_type, principal_name, state_desc | ConvertTo-Html  -CSSUri "HtmlReport.css"| Set-Content "$fullfolderPath\HtmlReport.html"
+$results | select security_type, security_entity, principal_type, principal_name, state_desc | ConvertTo-Html  -PreContent "<h1>$SqlInstance</H1><H2>Server Roles</h2>" -CSSUri "HtmlReport.css"| Set-Content "$fullfolderPath\HtmlReport.html"
 
-# Return to Base
 set-location $BaseFolder

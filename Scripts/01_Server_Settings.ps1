@@ -15,17 +15,16 @@
     01_Server_Settings.ps1 server01 sa password
 
 .Inputs
-    ServerName\Instance, [SQLUser], [SQLPassword]
+    ServerName, [SQLUser], [SQLPassword]
 
 .Outputs
-	SQL Server Global Settings in HTML Table format
+	HTML Files
 	
 .NOTES
-    George Walkey
-    Richmond, VA USA
+
 	
 .LINK
-    https://github.com/gwalkey
+
 	
 #>
 
@@ -37,10 +36,12 @@ Param(
 
 [string]$BaseFolder = (Get-Item -Path ".\" -Verbose).FullName
 
-Import-Module "sqlps" -DisableNameChecking -erroraction SilentlyContinue
-
 #  Script Name
 Write-Host  -f Yellow -b Black "01 - Server Settings"
+
+# Load SMO Assemblies
+Import-Module ".\LoadSQLSmo.psm1"
+LoadSQLSMO
 
 
 # assume localhost
@@ -53,7 +54,7 @@ if ($SQLInstance.length -eq 0)
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
 {
-    Write-Host -f yellow "Usage: ./01_Server_Settings.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
+    Write-host -f yellow "Usage: ./01_Server_Settings.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
     Set-Location $BaseFolder
     exit
 }
@@ -83,7 +84,7 @@ try
     }
 
     if($results -ne $null)
-    {        
+    {
         Write-Output ("SQL Version: {0}" -f $results.Column1)
     }
 
@@ -98,9 +99,6 @@ catch
 	exit
 }
 
-
-# Load SQL SMO Assembly
-[System.Reflection.Assembly]::LoadWithPartialName("Microsoft.SqlServer.SMO") | out-null
 
 # Set Local Vars
 $server 	= $SQLInstance
@@ -163,11 +161,13 @@ td
 
 $myCSS | out-file "$output_path\HTMLReport.css" -Encoding ascii
 
-# Export Server Settings
+# Export it
 $mySettings = $srv.Configuration.Properties
-$mySettings | sort-object DisplayName | select Displayname, ConfigValue, runValue | ConvertTo-Html  -CSSUri "HtmlReport.css"| Set-Content "$output_path\HtmlReport.html"
+$mySettings | sort-object DisplayName | select Displayname, ConfigValue, runValue | ConvertTo-Html -PreContent "<h1>$SqlInstance</H1><H2>Server Settings</h2>" -CSSUri "HtmlReport.css"| Set-Content "$output_path\HtmlReport.html"
 
+# ----------------------------
 # Get Buffer Pool Extensions
+# ----------------------------
 $mySQLquery = "
 USE Master; select State, path, current_size_in_kb as sizeKB from sys.dm_os_buffer_pool_extension_configuration
 "
@@ -182,7 +182,7 @@ else
     $sqlresults = Invoke-SqlCmd -ServerInstance $SQLInstance -Query $mySQLquery -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
 }
 
-# Export it - State = 5 means BPE is enabled
+# Export it
 if ($sqlresults.state -eq 5)
 {
     $strExport = "
@@ -191,12 +191,11 @@ if ($sqlresults.state -eq 5)
     (
     	FILENAME = N'" + $sqlresults.path + "'," +
     "   SIZE = " + $sqlresults.sizeKB +"KB"+"`r`n"+
-    "    );"
+"    );"
 
     $strExport | out-file "$output_path\Buffer_Pool_Extension.sql" -Encoding ascii
 }
 
-# Return to Base
 set-location $BaseFolder
 
 

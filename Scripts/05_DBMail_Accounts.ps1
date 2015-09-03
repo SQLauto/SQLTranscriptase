@@ -12,17 +12,16 @@
     05_DBMail_Accounts.ps1 server01 sa password
 	
 .Inputs
-    ServerName\Instance, [SQLUser], [SQLPassword]
+    ServerName, [SQLUser], [SQLPassword]
 
 .Outputs
-	DBMail Accounts in .SQL format
+
 	
 .NOTES
-    George Walkey
-    Richmond, VA USA
+
 	
 .LINK
-    https://github.com/gwalkey
+
 	
 #>
 
@@ -37,6 +36,10 @@ Param(
 
 #  Script Name
 Write-Host  -f Yellow -b Black "05 - DBMail Accounts"
+
+# Load SMO Assemblies
+Import-Module ".\LoadSQLSmo.psm1"
+LoadSQLSMO
 
 # assume localhost
 if ($SQLInstance.length -eq 0)
@@ -56,6 +59,7 @@ if ($SQLInstance.Length -eq 0)
 
 # Working
 Write-Output "Server $SQLInstance"
+
 
 # Server connection check
 try
@@ -77,7 +81,7 @@ try
     }
 
     if($results -ne $null)
-    {        
+    {
         Write-Output ("SQL Version: {0}" -f $results.Column1)
     }
 
@@ -91,6 +95,15 @@ catch
     Set-Location $BaseFolder
 	exit
 }
+
+
+
+$fullfolderPath = "$BaseFolder\$sqlinstance\05 - DBMail Accounts"
+if(!(test-path -path $fullfolderPath))
+{
+	mkdir $fullfolderPath | Out-Null
+}
+
 
 $sql = 
 "
@@ -139,71 +152,44 @@ drop table #tbl;
 
 "
 
-
-$fullfolderPath = "$BaseFolder\$sqlinstance\05 - DBMail Accounts"
-if(!(test-path -path $fullfolderPath))
-{
-	mkdir $fullfolderPath | Out-Null
-}
-	
-# Test for Username/Password needed to connect - else assume WinAuth passthrough
-if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
-{
-	Write-Output "Using SQL Auth"
     
-    $old_ErrorActionPreference = $ErrorActionPreference
-    $ErrorActionPreference = 'SilentlyContinue'
+# Turn Off default Error handler
+$old_ErrorActionPreference = $ErrorActionPreference
+$ErrorActionPreference = 'SilentlyContinue'
 
-	$results = Invoke-SqlCmd -query $sql -Server $SQLInstance –Username $myuser –Password $mypass 	
-    if ($results -eq $null )
-    {
-        Write-Output "No Database Mail Accounts found on $SQLInstance"
-        echo null > "$BaseFolder\$SQLInstance\05 - No Database Mail Accounts found.txt"
-        Set-Location $BaseFolder
-        exit
-    }
 
-    # Reset default PS error handler
-    $ErrorActionPreference = $old_ErrorActionPreference 
-
-    New-Item "$fullfolderPath\DBMail_Accounts.sql" -type file -force  |Out-Null
-    Foreach ($row in $results)
-    {
-        $row.column1 | out-file "$fullfolderPath\DBMail_Accounts.sql" -Encoding ascii -Append
-		Add-Content -Value "`r`n" -Path "$fullfolderPath\DBMail_Accounts.sql" -Encoding Ascii
-    }
-    Write-Output ("Exported: {0} DBMail Accounts" -f $results.count)
+if ($serverauth -eq "win")
+{
+	Write-Output "Using Windows Auth"
+	$results = Invoke-SqlCmd -query $sql -Server $SQLInstance
 }
 else
 {
-	Write-Output "Using Windows Auth"
-
-    $old_ErrorActionPreference = $ErrorActionPreference
-    $ErrorActionPreference = 'SilentlyContinue'
-
-	$results = Invoke-SqlCmd -query $sql -Server $SQLInstance  	
-    if ($results -eq $null )
-    {
-        Write-Output "No Database Mail Accounts found on $SQLInstance"
-        echo null > "$BaseFolder\$SQLInstance\05 - No Database Mail Accounts found.txt"
-        Set-Location $BaseFolder
-        exit
-    }
-
-    # Reset default PS error handler
-    $ErrorActionPreference = $old_ErrorActionPreference 
-
-
-	New-Item "$fullfolderPath\DBMail_Accounts.sql" -type file -force  |Out-Null
-	Foreach ($row in $results)
-    {
-        $row.column1 | out-file "$fullfolderPath\DBMail_Accounts.sql" -Encoding ascii -Append
-		Add-Content -Value "`r`n" -Path "$fullfolderPath\DBMail_Accounts.sql" -Encoding Ascii
-    }
-    Write-Output ("Exported: {0} DBMail Accounts" -f $results.count)
+    Write-Output "Using SQL Auth"
+    $results = Invoke-SqlCmd -query $sql -Server $SQLInstance –Username $myuser –Password $mypass
 }
 
-# Return to Base
+if ($results -eq $null )
+{
+    Write-Output "No Database Mail Accounts found on $SQLInstance"
+    echo null > "$BaseFolder\$SQLInstance\05 - No Database Mail Accounts found.txt"
+    Set-Location $BaseFolder
+    exit
+}
+
+# Reset default PS error handler
+$ErrorActionPreference = $old_ErrorActionPreference 
+
+New-Item "$fullfolderPath\DBMail_Accounts.sql" -type file -force  |Out-Null
+Foreach ($row in $results)
+{
+    $row.column1 | out-file "$fullfolderPath\DBMail_Accounts.sql" -Encoding ascii -Append
+	Add-Content -Value "`r`n" -Path "$fullfolderPath\DBMail_Accounts.sql" -Encoding Ascii
+}
+
+Write-Output ("{0} DBMail Accounts Exported" -f $results.count)
+
+
 set-location $BaseFolder
 
 

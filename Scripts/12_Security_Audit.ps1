@@ -3,7 +3,7 @@
     Gets SQL Server Security Information from the target server
 	
 .DESCRIPTION
-   Writes out the results of 5 SQL Queries to a sub folder of the Server Name
+   Writes out the results of 5 SQL Queries to a sub folder of the Server Name (C0SQL1)
    One HTML file for each Query
    
 .EXAMPLE
@@ -13,17 +13,14 @@
     SQLSecurityAudit.ps1 server01 sa password
 
 .Inputs
-    ServerName\Instance, [SQLUser], [SQLPassword]
+    ServerName, [SQLUser], [SQLPassword]
 
 .Outputs
-	Server Logins, Database Users, Database Roles, Login-to-User mappings, DB-level and Object-level Permissions in HTML format
+	HTML Files
 	
 .NOTES
-    George Walkey
-	Richmond, VA
 
 .LINK
-    https://github.com/gwalkey
 	
 #>
 
@@ -36,12 +33,13 @@ Param(
 
 [string]$BaseFolder = (Get-Item -Path ".\" -Verbose).FullName
 
-Import-Module "sqlps" -DisableNameChecking -erroraction SilentlyContinue
-
-Set-Location $BaseFolder
-
 #  Script Name
 Write-Host  -f Yellow -b Black "12 - Security Audit"
+
+
+# Load SMO Assemblies
+Import-Module ".\LoadSQLSmo.psm1"
+LoadSQLSMO
 
 # assume localhost
 if ($SQLInstance.length -eq 0)
@@ -53,7 +51,7 @@ if ($SQLInstance.length -eq 0)
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
 {
-    Write-Host -f yellow -b black "Usage: ./12_Security_Audit.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
+    Write-host -f yellow -b black "Usage: ./12_Security_Audit.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
     Set-Location $BaseFolder
     exit
 }
@@ -83,7 +81,7 @@ try
     }
 
     if($results -ne $null)
-    {        
+    {
         Write-Output ("SQL Version: {0}" -f $results.Column1)
     }
 
@@ -98,11 +96,6 @@ catch
 	exit
 }
 
-
-
-# Load SQL SMO Assemblies
-[System.Reflection.Assembly]::LoadWithPartialName("Microsoft.SqlServer.SMO") | out-null
-[System.Reflection.Assembly]::LoadWithPartialName('Microsoft.SqlServer.SMOExtended')  | out-null
 
 # Set Local Vars
 $server = $SQLInstance
@@ -212,22 +205,25 @@ td
 
 $myCSS | out-file "$fullfolderPath\HTMLReport.css" -Encoding ascii
 
+
+Write-Output "Server Logins..."
 # Run Query 1
 if ($serverauth -ne "win")
 {
-	Write-Output "Using Sql Auth"
+	#Write-Output "Using Sql Auth"
 	$results = Invoke-SqlCmd -query $sql1 -Server $SQLInstance –Username $myuser –Password $mypass 
 }
 else
 {
-	Write-Output "Using Windows Auth"	
+	#Write-Output "Using Windows Auth"	
 	$results = Invoke-SqlCmd -query $sql1 -Server $SQLInstance      
 }
 
 # Write out rows
-$results | select Login, DefaultDB, language, IsDenied, IsWinAuthentication, IsWinGroup, CreateDate, UpdateDate, ServerRoles, IsSysAdmin| ConvertTo-Html  -CSSUri "HtmlReport.css"| Set-Content "$fullfolderPath\1_Server_Logins.html"
+$results | select Login, DefaultDB, language, IsDenied, IsWinAuthentication, IsWinGroup, CreateDate, UpdateDate, ServerRoles, IsSysAdmin|`
+ConvertTo-Html  -PreContent "<h1>$SqlInstance</H1><H2>Server Logins</h2>" -CSSUri "HtmlReport.css"| Set-Content "$fullfolderPath\1_Server_Logins.html"
 
-# Return to Base
+
 set-location $BaseFolder
 
 # -----------------------
@@ -250,9 +246,11 @@ foreach($sqlDatabase in $srv.databases)
         mkdir $output_path | Out-Null	
     }
 
-	$sqlDatabase.Name
-    # Run Query 2
-	# 2) Login_to_User_Mappings
+    $sqlDatabase.Name
+    
+    # Run Query 2    
+    # 2) Login_to_User_Mappings
+
     $sql2 = "
     Use ["+ $sqlDatabase.Name + "];"+
     "
@@ -267,32 +265,35 @@ foreach($sqlDatabase in $srv.databases)
     	sp.name, 
     	dp.name;
     "
-
+    #Write-Output $sql2
 
     # Run SQL
     if ($serverauth -ne "win")
     {
+    	#Write-Output "Using Sql Auth"
     	$results2 = Invoke-SqlCmd -query $sql2 -Server $SQLInstance –Username $myuser –Password $mypass 
     }
     else
     {
+    	#Write-Output "Using Windows Auth"	
     	$results2 = Invoke-SqlCmd -query $sql2 -Server $SQLInstance      
     }
 
     # Write out rows
     $myCSS | out-file "$output_path\HTMLReport.css" -Encoding ascii
-    $results2 | select Login, User | ConvertTo-Html  -CSSUri "HtmlReport.css"| Set-Content "$output_path\2_Login_to_User_Mapping.html"
+    $results2 | select Login, User | ConvertTo-Html -PreContent "<h1>$SqlInstance</H1><H2>Login-to-User Mappings</h2>" -CSSUri "HtmlReport.css"| Set-Content "$output_path\2_Login_to_User_Mapping.html"
 
-    Set-Location $BaseFolder
+    set-location $BaseFolder
 
     # Run Query 3
-	# 3) Roles per User
+    # 3) Roles per User
+
     $sql3 = "
     Use ["+ $sqlDatabase.Name + "];"+
     "
     SELECT 
-		a.name AS User_name,
-	    b.name AS Role_name	    
+        a.name AS User_name,
+	    b.name AS Role_name	   
     FROM 
     sysusers a 
     INNER JOIN sysmembers c 
@@ -306,20 +307,22 @@ foreach($sqlDatabase in $srv.databases)
     
     if ($serverauth -ne "win") 
     {
+    	#Write-output "Using Sql Auth"
     	$results3 = Invoke-SqlCmd -query $sql3 -Server $SQLInstance –Username $myuser –Password $mypass 
     }
     else
     {
+    	#Write-output "Using Windows Auth"	
     	$results3 = Invoke-SqlCmd -query $sql3 -Server $SQLInstance      
     }
 
     # Write out rows    
-    $results3 | select User_Name, Role_Name | ConvertTo-Html  -CSSUri "HtmlReport.css"| Set-Content "$output_path\3_Roles_Per_User.html"
+    $results3 | select User_Name,Role_Name | ConvertTo-Html -PreContent "<h1>$SqlInstance</H1><H2>Roles Per User</h2>" -CSSUri "HtmlReport.css"| Set-Content "$output_path\3_Roles_Per_User.html"
 
     set-location $BaseFolder
 
     # Run Query 4
-	# 4) Databse-Level Permissions
+    # 4) Databse-Level Permissions
     $sql4 = "
     Use ["+ $sqlDatabase.Name + "];"+
     "
@@ -350,12 +353,12 @@ foreach($sqlDatabase in $srv.databases)
     }
 
     # Write out rows    
-    $results4 | select User, Operation, permission_name, IsGrantOption | ConvertTo-Html  -CSSUri "HtmlReport.css"| Set-Content "$output_path\4_DBLevel_Permissions.html"
+    $results4 | select User, Operation, permission_name, IsGrantOption | ConvertTo-Html -PreContent "<h1>$SqlInstance</H1><H2>DataBase-Level Permissions</h2>" -CSSUri "HtmlReport.css"| Set-Content "$output_path\4_DBLevel_Permissions.html"
 
     set-location $BaseFolder
 
     # Run Query 5
-	# 5) Individual Database-Level Object Permissions
+    # 5) Individual Database-Level Object Permissions
     $sql5 = "
     Use ["+ $sqlDatabase.Name + "];"+
     "
@@ -398,12 +401,11 @@ foreach($sqlDatabase in $srv.databases)
     }
 
     # Write out rows    
-    $results5 | select User, PermType, permission_name, SchemaName, ObjectName, ObjectType, ColumnName, IsGrantOption | ConvertTo-Html  -CSSUri "HtmlReport.css"| Set-Content "$output_path\5_Object_Permissions.html"
-    
+    $results5 | select User, PermType, permission_name, SchemaName, ObjectName, ObjectType, ColumnName, IsGrantOption | `
+    ConvertTo-Html -PreContent "<h1>$SqlInstance</H1><H2>Object-Level Permissions</h2>" -CSSUri "HtmlReport.css"| Set-Content "$output_path\5_Object_Permissions.html"
+
     set-location $BaseFolder
         
 }
 
-
-# Return to Base
 set-location $BaseFolder

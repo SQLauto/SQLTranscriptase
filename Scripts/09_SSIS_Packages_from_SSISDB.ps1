@@ -1,7 +1,6 @@
 <#
 .SYNOPSIS
     Gets the SQL Server Integration Services Catalog objects on the target server
-    We use BCP to export binary data
 	
 .DESCRIPTION
    Writes the SSIS Packages out to the "09 - SSISDB" folder
@@ -13,17 +12,16 @@
     09_SSIS_Packages_from_SSISDB.ps1 server01 sa password
 
 .Inputs
-    ServerName\Instance, [SQLUser], [SQLPassword]
+    ServerName, [SQLUser], [SQLPassword]
 
 .Outputs
-	SSIS 2012+ Catalog Projects/Folders/Packages in .ispac format
+
 	
 .NOTES
-    George Walkey
-    Richmond, VA USA
+
 	
 .LINK
-    https://github.com/gwalkey
+
 	
 #>
 
@@ -33,22 +31,29 @@ Param(
   [string]$mypass
 )
 
+
 [string]$BaseFolder = (Get-Item -Path ".\" -Verbose).FullName
+
 
 #  Script Name
 Write-Host  -f Yellow -b Black "09 - SSIS Packages from SSISDB"
+
+# Load SMO Assemblies
+Import-Module ".\LoadSQLSmo.psm1"
+LoadSQLSMO
+
 
 # assume localhost
 if ($SQLInstance.length -eq 0)
 {
 	Write-Output "Assuming localhost"
-	$Sqlinstance = 'localhost'
+	$SQLInstance = 'localhost'
 }
 
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
 {
-    Write-Host -f yellow "Usage: ./09_SSIS_Packages_from_SSISDB.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
+    Write-host -f yellow "Usage: ./09_SSIS_Packages_from_SSISDB.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
     Set-Location $BaseFolder
     exit
 }
@@ -57,7 +62,6 @@ if ($SQLInstance.Length -eq 0)
 # Working
 Write-Output "Server $SQLInstance"
 
-import-module "sqlps" -DisableNameChecking -erroraction SilentlyContinue
 
 # See if the SSISDB Catalog Exists first
 $Folders = @()
@@ -68,8 +72,8 @@ if ($mypass.Length -ge 1 -and $myuser.Length -ge 1)
 	# See if the SSISDB Catalog Exists first
 	[bool]$exists = $FALSE
 
-    #  load SMO Assemblies
-	[reflection.assembly]::LoadWithPartialName("Microsoft.SqlServer.Smo") | Out-Null
+    # we set this to null so that nothing is displayed
+	$null = [reflection.assembly]::LoadWithPartialName("Microsoft.SqlServer.Smo")
 	   
 	# Get reference to database instance
 	$server = new-object ("Microsoft.SqlServer.Management.Smo.Server") $SQLInstance
@@ -121,7 +125,7 @@ else
 	$exists = $FALSE
 
     # we set this to null so that nothing is displayed
-	[reflection.assembly]::LoadWithPartialName("Microsoft.SqlServer.Smo") | Out-Null
+	$null = [reflection.assembly]::LoadWithPartialName("Microsoft.SqlServer.Smo")
 	   
 	# Get reference to database instance
 	$server = new-object ("Microsoft.SqlServer.Management.Smo.Server") $SQLInstance
@@ -190,8 +194,8 @@ Foreach ($folder in $Folders)
 Set-Location $fullfolderPath
 $destfrag = "\"+$sqlinstance+"_SSISDB_Master_Key.txt"
 $destfile = $backupfolder+$destfrag
-Write-Output "Writing out Key File..."
 
+Write-Output "Writing out Key File..."
 $myquery = "use SSISDB; "
 $myquery += " backup master key to file = '$destfile'"
 $myquery += " encryption by password = 'Brf7d5XtWc5gJiTBU8uW'"
@@ -248,7 +252,6 @@ $myrestorecmd = "Restore master key from file = 'SSISDB_Master_Key.txt' `
 Write-Output "Writing out Master Key Restore Command..."
 $myrestorecmd | out-file $fullfolderPath\Master_Key_Restore_cmd.sql -Encoding ascii
 
-Write-Output ("Exported: {0} Packages" -f $Folders.count)
+Write-Output ("{0} Packages Exported" -f $Folders.count)
 
-# Return to Base
 set-location $BaseFolder

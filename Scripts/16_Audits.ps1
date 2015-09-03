@@ -14,21 +14,19 @@
     16_Audits.ps1 server01 sa password
 
 .Inputs
-    ServerName\Instance, [SQLUser], [SQLPassword]
+    ServerName, [SQLUser], [SQLPassword]
 
 .Outputs
-	SQL Audits in .SQL format
+
 	
 .NOTES
     MSDN References:
     https://msdn.microsoft.com/en-us/library/microsoft.sqlserver.management.smo.audit.enumserverauditspecification.aspx
     https://msdn.microsoft.com/en-us/library/microsoft.sqlserver.management.smo.audit.enumdatabaseauditspecification.aspx
 
-    George Walkey
-    Richmond, VA USA
 	
 .LINK
-    https://github.com/gwalkey
+
 	
 #>
 
@@ -43,18 +41,22 @@ Param(
 
 Write-Host  -f Yellow -b Black "16 - Audits"
 
+# Load SMO Assemblies
+Import-Module ".\LoadSQLSmo.psm1"
+LoadSQLSMO
+
+
 # assume localhost
 if ($SQLInstance.length -eq 0)
 {
 	Write-Output "Assuming localhost"
-	$Sqlinstance = 'localhost'
+	$SQLInstance = 'localhost'
 }
-
 
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
 {
-    Write-Host -f yellow "Usage: ./16_Audits.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
+    Write-host -f yellow "Usage: ./16_Audits.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
     Set-Location $BaseFolder
     exit
 }
@@ -62,10 +64,6 @@ if ($SQLInstance.Length -eq 0)
 
 # Working
 Write-Output "Server $SQLInstance"
-
-import-module "sqlps" -DisableNameChecking -erroraction SilentlyContinue
-
-
 
 # Server connection check
 try
@@ -78,18 +76,16 @@ try
         Write-Output "Testing SQL Auth"
         $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
         $serverauth="sql"
-		$myver = $results.Column1
     }
     else
     {
         Write-Output "Testing Windows Auth"
     	$results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -QueryTimeout 10 -erroraction SilentlyContinue
         $serverauth = "win"
-		$myver = $results.Column1
     }
 
     if($results -ne $null)
-    {        
+    {
         Write-Output ("SQL Version: {0}" -f $results.Column1)
     }
 
@@ -104,11 +100,6 @@ catch
 	exit
 }
 
-
-
-# Load SQL SMO Assemblies
-[System.Reflection.Assembly]::LoadWithPartialName("Microsoft.SqlServer.SMO") | out-null
-[System.Reflection.Assembly]::LoadWithPartialName('Microsoft.SqlServer.SMOExtended') | out-null
 
 # Get Server Object
 $server = $SQLInstance
@@ -187,7 +178,9 @@ foreach($sqlDatabase in $srv.databases)
     $db = $sqlDatabase
     $fixedDBName = $db.name.replace('[','')
     $fixedDBName = $fixedDBName.replace(']','')
-    $DB_Audit_output_path = "$BaseFolder\$SQLInstance\16 - Audits\$fixedDBName"    
+    $DB_Audit_output_path = "$BaseFolder\$SQLInstance\16 - Audits\$fixedDBName"
+
+    
             
     foreach($DBAudit in $db.DatabaseAuditSpecifications)
     {
@@ -207,6 +200,6 @@ foreach($sqlDatabase in $srv.databases)
 }
 
 
-# Return to Base
+# finished
 set-location $BaseFolder
 

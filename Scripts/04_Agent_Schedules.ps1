@@ -12,19 +12,16 @@
     04_Agent_Schedules.ps1 server01 sa password
 
 .Inputs
-    ServerName\Instance, [SQLUser], [SQLPassword]
+    ServerName, [SQLUser], [SQLPassword]
 
 .Outputs
-	Agent Schedules in .SQL format
-	Agent Schedules in a Visual Grid HTML Table format
 
+	
 .NOTES
-    George Walkey
-    Richmond, VA USA
+
 	
 .LINK
-    https://github.com/gwalkey
-	
+    
 	
 #>
 
@@ -37,6 +34,10 @@ Param(
 
 #  Script Name
 Write-Host  -f Yellow -b Black "04 - Agent Schedules"
+
+# Load SMO Assemblies
+Import-Module ".\LoadSQLSmo.psm1"
+LoadSQLSMO
 
 # assume localhost
 if ($SQLInstance.length -eq 0)
@@ -57,7 +58,6 @@ if ($SQLInstance.Length -eq 0)
 # Working
 Write-Output "Server $SQLInstance"
 
-Import-Module “sqlps” -DisableNameChecking -erroraction SilentlyContinue
 
 $sql = 
 "
@@ -247,10 +247,11 @@ $sql2 =
 "
 
 
+
 declare @AgentSked TABLE(
-[Ranking] int not null,
 [Sked] nvarchar(128) NOT NULL,
 [Sked_Enabled] int not null,
+[Schedule_uid] uniqueidentifier not null,
 [Job] nvarchar(128) NOT NULL,
 [Job_Enabled] int not null,
 [Frequency] varchar(45) not null,
@@ -290,11 +291,11 @@ declare @AgentSked TABLE(
 
 INSERT into @AgentSked
 SELECT   
-1,
 k.[name],
-k.[enabled],
+k.[enabled] as 'Sked_Enabled',
+k.[Schedule_uid],
 j.[name],
-j.[enabled],
+j.[enabled] as 'Job Enabled',
 case [freq_type]
 	when 1 then 'One Shot'
 	when 4 then 'Daily'
@@ -544,7 +545,6 @@ where (t.[Freq_SubDay_Type]='At StartTime' or t.[Frequency]='One Shot') and t.St
 --- Pass 3 - Get all Jobs that run only Every Hour
 update t
 set 
-Ranking = 0,
 t.[00Z]='x',
 t.[01Z]='x',
 t.[02Z]='x',
@@ -577,7 +577,6 @@ where t.[Freq_SubDay_Type]='Every 1 Hours'
 --- Pass 3 - Get all Jobs that run 'Every X Minutes', 'Every X Seconds'
 update t
 set 
-Ranking = 0,
 t.[00Z]='X',
 t.[01Z]='X',
 t.[02Z]='X',
@@ -747,7 +746,7 @@ update t
 set StartHour = OriginalStartHour 
 from @AgentSked t
 
-select * from @AgentSked order by Ranking, StartHour, Sked, job
+select * from @AgentSked order by StartHour, Sked, job
 
 
 "
@@ -805,7 +804,7 @@ if(!(test-path -path "$fullfolderPath\HTMLReport.css"))
 # Export the Job Schedules to HTML
 $Skeds | select Sked, Sked_Enabled, Job, Job_Enabled, Frequency, Freq_Interval, Freq_SubDay_Type, Freq_SubDay_Interval, StartDate, StartTime, StartHour, `
 00Z, 01Z, 02Z, 03Z, 04Z, 05Z, 06Z, 07Z, 08Z, 09Z, 10Z, 11Z, 12Z, 13Z, 14Z, 15Z, 16Z, 17Z, 18Z, 19Z, 20Z, 21Z, 22Z, 23Z `
-| ConvertTo-Html  -CSSUri "HtmlReport.css"| Set-Content "$fullfolderPath\AgentJobSchedules.html"
+| ConvertTo-Html  -PreContent "<h1>$SqlInstance</H1><H2>SQL Agent Job Schedules</h2>" -CSSUri "HtmlReport.css"| Set-Content "$fullfolderPath\AgentJobSchedules.html"
 
 # Export the Job Schedules to CSV
 $Skeds | select Sked, Sked_Enabled, Job, Job_Enabled, Frequency, Freq_Interval, Freq_SubDay_Type, Freq_SubDay_Interval, StartDate, StartTime, StartHour, `

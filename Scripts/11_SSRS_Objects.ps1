@@ -6,7 +6,7 @@
    Writes the SSRS Objects out to the "11 - SSRS" folder   
    Objects written include:
    RDL files
-   Timed Subscriptions in Visual Format
+   Timed Subscriptions
    RSreportserver.config file
    Encryption Keys   
    
@@ -16,18 +16,17 @@
 .EXAMPLE
     11_SSRS_Objects.ps1 server01 sa password
 
+
 .Inputs
-    ServerName\Instance, [SQLUser], [SQLPassword]
+    ServerName, [SQLUser], [SQLPassword]
 
 .Outputs
-	SSRS Objects
+
 	
 .NOTES
-    George Walkey
-    Richmond, VA USA
+
 	
 .LINK
-    https://github.com/gwalkey
 
 	
 #>
@@ -45,11 +44,15 @@ Param(
 #  Script Name
 Write-Host  -f Yellow -b Black "11 - SSRS Objects"
 
+# Load SMO Assemblies
+Import-Module ".\LoadSQLSmo.psm1"
+LoadSQLSMO
+
 # assume localhost
 if ($SQLInstance.length -eq 0)
 {
 	Write-Output "Assuming localhost"
-	$SQLInstance = 'localhost'
+	$Sqlinstance = 'localhost'
 }
 
 # Usage Check
@@ -97,9 +100,6 @@ td
     }
 "
 
-
-# Preload SQL PS module
-import-module "sqlps" -DisableNameChecking -erroraction SilentlyContinue
 
 set-location $BaseFolder
 
@@ -172,11 +172,6 @@ SELECT [ItemId],[ParentID],[Path]
   where Parentid is not null and [Type] = 1  
 "
 
-
-
-
-# Load PS assemblies
-[reflection.assembly]::LoadWithPartialName("Microsoft.SqlServer.Smo") | Out-Null
 
 
 # initialize arrays
@@ -513,7 +508,7 @@ $ErrorActionPreference = $old_ErrorActionPreference
 # ---------------------
 # 5) Timed Subscriptions
 # ---------------------
-# If a Report uses a Timed Subscription Schedule, Export it
+# If Report is using a Timed Subscription Schedule, Export it
 
 $myRDLSked = 
 "

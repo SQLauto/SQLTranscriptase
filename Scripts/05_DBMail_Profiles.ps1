@@ -12,18 +12,15 @@
     05_DBMail_Profiles.ps1 server01 sa password
 	
 .Inputs
-    ServerName\Instance, [SQLUser], [SQLPassword]
+    ServerName, [SQLUser], [SQLPassword]
 
 .Outputs
-    DBMail Profiles in .sql format
+    DBMail Profiles to DBMAIL_Profiles.sql
 	
 .NOTES
-    George Walkey
-    Richmond, VA USA
 	
 .LINK
-    https://github.com/gwalkey
-	
+
 	
 #>
 
@@ -39,13 +36,16 @@ Param(
 #  Script Name
 Write-Host  -f Yellow -b Black "05 - DBMail Profiles"
 
+# Load SMO Assemblies
+Import-Module ".\LoadSQLSmo.psm1"
+LoadSQLSMO
+
 # assume localhost
 if ($SQLInstance.length -eq 0)
 {
 	Write-Output "Assuming localhost"
 	$Sqlinstance = 'localhost'
 }
-
 
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
@@ -79,7 +79,7 @@ try
     }
 
     if($results -ne $null)
-    {        
+    {
         Write-Output ("SQL Version: {0}" -f $results.Column1)
     }
 
@@ -94,9 +94,6 @@ catch
 	exit
 }
 
-
-# Load SQL SMO Assembly
-[System.Reflection.Assembly]::LoadWithPartialName("Microsoft.SqlServer.SMO") | out-null
 
 #Set the server to script from 
 $Server= $SQLInstance;
@@ -140,7 +137,7 @@ if ($ProfileCount -gt 0)
         $ProfileScript | out-file "$fullfolderPath\DBMail_Profiles.sql" -Encoding ascii -Append
     }
     
-    Write-Output ("Exported: {0} DBMail Profiles" -f $DBMProfiles.count)
+    Write-Output ("{0} DBMail Profiles Exported" -f $DBMProfiles.count)
 }
 else
 {

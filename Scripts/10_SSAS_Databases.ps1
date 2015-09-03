@@ -18,18 +18,16 @@
 .EXAMPLE
     10_SSAS_Databases.ps1 server01 sa password
 
+
 .Inputs
-    ServerName\Instance, [SQLUser], [SQLPassword]
+    ServerName, [SQLUser], [SQLPassword]
 
 .Outputs
-	SSAS MD and Tabular Databases in XMLA format
 	
 .NOTES
-    George Walkey
-    Richmond, VA USA
 	
 .LINK
-    https://github.com/gwalkey
+
 #>
 
 Param(
@@ -38,22 +36,28 @@ Param(
   [string]$mypass
 )
 
+
 [string]$BaseFolder = (Get-Item -Path ".\" -Verbose).FullName
+
 
 #  Script Name
 Write-Host  -f Yellow -b Black "10 - SSAS Databases"
+
+# Load SMO Assemblies
+Import-Module ".\LoadSQLSmo.psm1"
+LoadSQLSMO
 
 # assume localhost
 if ($SQLInstance.length -eq 0)
 {
 	Write-Output "Assuming localhost"
-	$Sqlinstance = 'localhost'
+	$SQLInstance = 'localhost'
 }
 
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
 {
-    Write-Host -f yellow "Usage: ./10_SSAS_Databases.ps1 `"ServerName`" ([`"Username`"] [`"Password`"] if DMZ/SQL-Auth machine)"
+    Write-host -f yellow "Usage: ./10_SSAS_Databases.ps1 `"ServerName`" ([`"Username`"] [`"Password`"] if DMZ/SQL-Auth machine)"
     Set-Location $BaseFolder
     exit
 }
@@ -88,24 +92,24 @@ try
     Write-Output "Scripting out SSAS Databases..."
     foreach ($db in $svr.Databases) 
     { 
-
         $xw = new-object System.Xml.XmlTextWriter("$($fullfolderPath)10 - $($db.Name).xmla", [System.Text.Encoding]::UTF8) 
         $xw.Formatting = [System.Xml.Formatting]::Indented 
         [Microsoft.AnalysisServices.Scripter]::WriteCreate($xw,$svr,$db,$true,$true) 
         $xw.Close() 
-		$db.Name 
+
+        $db.Name 
     } 
     $svr.Disconnect()
 }
 catch
 {
-    Write-Output "SSAS NOT running or cant connect on $SQLInstance"
-    echo null > "$BaseFolder\$SQLInstance\10 - SSAS NOT running or cant connect.txt"
+    Write-Output "SSAS not running or cant connect on $SQLInstance"
+    echo null > "$BaseFolder\$SQLInstance\10 - SSAS not running or cant connect.txt"
     exit
 }
 
+
 Write-Output ("Exported: {0} SSAS Databases" -f $svr.Databases.Count)
 
-# Return to Base
 set-location $BaseFolder
 

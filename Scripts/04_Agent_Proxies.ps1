@@ -14,17 +14,14 @@
     04_Agent_Proxies.ps1 server01 sa password
 
 .Inputs
-    ServerName\Instance, [SQLUser], [SQLPassword]
+    ServerName, [SQLUser], [SQLPassword]
 
 .Outputs
-	Agent Proxies in .SQL format
-	
+
 .NOTES
-    George Walkey
-    Richmond, VA USA
 	
 .LINK
-    https://github.com/gwalkey
+
 	
 #>
 
@@ -34,8 +31,13 @@ Param(
   [string]$mypass
 )
 
+
 #  Script Name
 Write-Host  -f Yellow -b Black "04 - Agent Proxies"
+
+# Load SMO Assemblies
+Import-Module ".\LoadSQLSmo.psm1"
+LoadSQLSMO
 
 # assume localhost
 if ($SQLInstance.length -eq 0)
@@ -76,7 +78,7 @@ try
     }
 
     if($results -ne $null)
-    {        
+    {
         Write-Output ("SQL Version: {0}" -f $results.Column1)
     }
 
@@ -91,47 +93,6 @@ catch
 	exit
 }
 
-
-# Server connection check
-$serverauth = "win"
-if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
-{
-	Write-Output "Testing SQL Auth"
-	try
-    {
-        $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
-        if($results -ne $null)
-        {
-            $myver = $results.Column1
-            Write-Output $myver
-            $serverauth="sql"
-        }	
-	}
-	catch
-    {
-		Write-Host -f red "$SQLInstance appears offline - Try Windows Auth?"
-		exit
-	}
-}
-else
-{
-	Write-Output "Testing Windows Auth"
- 	Try
-    {
-        $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -QueryTimeout 10 -erroraction SilentlyContinue
-        if($results -ne $null)
-        {
-            $myver = $results.Column1
-            Write-Output $myver
-        }
-	}
-	catch
-    {
-	    Write-Host -f red "$SQLInstance appears offline - Try SQL Auth?" 
-	    exit
-	}
-
-}
 
 function CopyObjectsToFiles($objects, $outDir) {
 	
@@ -165,9 +126,6 @@ function CopyObjectsToFiles($objects, $outDir) {
 
 
 
-# Load SQL SMO Assembly
-[System.Reflection.Assembly]::LoadWithPartialName("Microsoft.SqlServer.SMO") | out-null
-
 # Set Local Vars
 $server 	= $SQLInstance
 
@@ -200,6 +158,6 @@ if(!(test-path -path $proxy_path))
 $pa = $srv.JobServer.ProxyAccounts
 CopyObjectsToFiles $pa $proxy_path
 
-Write-Output ("Exported: {0} Agent Proxies" -f $pa.count)
-# Return to Base
+Write-Output ("{0} Agent Proxies Exported" -f $pa.count)
+
 set-location $BaseFolder
