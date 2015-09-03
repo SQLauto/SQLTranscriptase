@@ -74,7 +74,7 @@ function LoadSQLSMO(){
                 {
                     Add-Type -AssemblyName "Microsoft.SqlServer.Smo, Version=10.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91"
                     Add-Type -AssemblyName "Microsoft.SqlServer.SMOExtended, Version=10.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91"
-                    Write-Output "Using SMO Library 10 (2008)"
+                    Write-Output "Using SMO Library v10 (2008)"
                 }
                 catch
                 {
@@ -82,7 +82,7 @@ function LoadSQLSMO(){
                     {
                         Add-Type -AssemblyName "Microsoft.SqlServer.Smo, Version=9.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91"
                         Add-Type -AssemblyName "Microsoft.SqlServer.SMOExtended, Version=9.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91"
-                        Write-Output "Using SMO Library 9 (2005)"
+                        Write-Output "Using SMO Library v9 (2005)"
                     }
                     catch
                     {
