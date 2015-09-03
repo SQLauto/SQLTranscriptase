@@ -19,12 +19,12 @@
 
 .Outputs
 
-	
 .NOTES
+	George Walkey
+	Richmond, VA USA
 
-	
 .LINK
-
+	https://github.com/gwalkey
 	
 #>
 

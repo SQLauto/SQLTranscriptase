@@ -18,8 +18,11 @@
     DBMail Profiles to DBMAIL_Profiles.sql
 	
 .NOTES
-	
+	George Walkey
+	Richmond, VA USA
+
 .LINK
+	https://github.com/gwalkey
 
 	
 #>

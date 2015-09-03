@@ -18,15 +18,11 @@
 
 .Outputs
 
-	
 .NOTES
-    MSDN References:
-    https://msdn.microsoft.com/en-us/library/microsoft.sqlserver.management.smo.audit.enumserverauditspecification.aspx
-    https://msdn.microsoft.com/en-us/library/microsoft.sqlserver.management.smo.audit.enumdatabaseauditspecification.aspx
-
-	
+	George Walkey
+	Richmond, VA USA
 .LINK
-
+	https://github.com/gwalkey
 	
 #>
 

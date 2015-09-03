@@ -16,11 +16,12 @@
 
 .Outputs
 
-	
 .NOTES
-	Testing TFS Versioning
-	
+	George Walkey
+	Richmond, VA USA
+
 .LINK
+	https://github.com/gwalkey
 	
 #>
 

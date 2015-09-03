@@ -24,14 +24,14 @@
     Once the Database Master Key is restored, the Syms and ASyms are restored (because they live in the database)
     AKA, MS has no export routine for Sym/ASym keys
 
-
 .Inputs
     ServerName, [SQLUser], [SQLPassword]
 
-.Outputs
-
-
+.NOTES
+	George Walkey
+	Richmond, VA USA
 .LINK
+	https://github.com/gwalkey
 
 #>
 

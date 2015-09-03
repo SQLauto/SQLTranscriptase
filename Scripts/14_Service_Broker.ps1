@@ -18,18 +18,16 @@
 .EXAMPLE
     14_Service_Broker.ps1 server01 sa password
 
-
 .Inputs
     ServerName, [SQLUser], [SQLPassword]
 
 .Outputs
-
 	
 .NOTES
-
-	
+	George Walkey
+	Richmond, VA USA
 .LINK
-
+	https://github.com/gwalkey
 	
 #>
 

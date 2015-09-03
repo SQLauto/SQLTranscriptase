@@ -15,17 +15,16 @@
     17_Managed_Backups.ps1 server01 sa password
 
 .NOTES
-
+	George Walkey
+	Richmond, VA USA
+.LINK
+	https://github.com/gwalkey
 
 .Inputs
     ServerName, [SQLUser], [SQLPassword]
 
 .Outputs
 
-
-.LINK
-    https://msdn.microsoft.com/en-us/library/dn449497(v=sql.120).aspx
-    
 #>
 
 Param(
