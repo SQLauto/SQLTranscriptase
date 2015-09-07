@@ -1,6 +1,9 @@
 # SQLTranscriptase 
 SQL Server Documentation in Powershell
 
+Video Here:
+http://usergroup.tv/videos/scripting-out-sql-server-for-documentation-and-disaster-recovery
+
 More Details are found in the Devnotes.txt in the Media folder
 
 First Debuted at SQL Saturday 381 in Richmond VA on March 21, 2015
