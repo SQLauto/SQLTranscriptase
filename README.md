@@ -12,10 +12,13 @@ http://www.sqlsaturday.com/422/eventhome.aspx
 
 Upcoming Presentations:
 
+Pittsburg, PA<br>
 http://www.sqlsaturday.com/440/eventhome.aspx
 
+Orlando, FL<br>
 http://www.sqlsaturday.com/452/eventhome.aspx
 
+Charlotte, NC<br>
 http://www.sqlsaturday.com/442/eventhome.aspx
 
 
