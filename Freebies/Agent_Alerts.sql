@@ -1,5 +1,3 @@
---Please Set your own DBMail Operator on these Alerts when finished
-
 USE MSDB 
 GO 
 
@@ -36,6 +34,24 @@ EXEC msdb.dbo.sp_add_alert
 ,@severity=0
 ,@enabled=1
 ,@delay_between_responses=60
+,@include_event_description_in=1
+,@job_id=N'00000000-0000-0000-0000-000000000000'
+
+EXEC msdb.dbo.sp_add_alert 
+ @name=N'Error Number 17204 - Could not Open file'
+,@message_id=17204
+,@severity=0
+,@enabled=1
+,@delay_between_responses=0
+,@include_event_description_in=1
+,@job_id=N'00000000-0000-0000-0000-000000000000'
+
+EXEC msdb.dbo.sp_add_alert 
+ @name=N'Error Number 17207 - The OS cannot Open the file'
+,@message_id=17207
+,@severity=0
+,@enabled=1
+,@delay_between_responses=0
 ,@include_event_description_in=1
 ,@job_id=N'00000000-0000-0000-0000-000000000000'
 
@@ -202,6 +218,15 @@ EXEC msdb.dbo.sp_add_alert
 ,@job_id=N'00000000-0000-0000-0000-000000000000'
 
 EXEC msdb.dbo.sp_add_alert 
+ @name=N'Error Number 5120 - Unable to open the physical file'
+,@message_id=5120
+,@severity=0
+,@enabled=1
+,@delay_between_responses=0
+,@include_event_description_in=1
+,@job_id=N'00000000-0000-0000-0000-000000000000'
+
+EXEC msdb.dbo.sp_add_alert 
  @name=N'Error Number 5144 - File autogrow cancelled or timed out'
 ,@message_id=5144
 ,@severity=0
@@ -337,15 +362,6 @@ EXEC msdb.dbo.sp_add_alert
 ,@job_id=N'00000000-0000-0000-0000-000000000000'
 
 EXEC msdb.dbo.sp_add_alert 
- @name=N'Perf - Stolen Server Memory rising above 1Gig'
-,@message_id=0
-,@severity=0
-,@enabled=0
-,@delay_between_responses=0
-,@include_event_description_in=4
-,@job_id=N'00000000-0000-0000-0000-000000000000'
-
-EXEC msdb.dbo.sp_add_alert 
  @name=N'Severity 014 - Insufficient Permission'
 ,@message_id=0
 ,@severity=14
@@ -451,23 +467,5 @@ EXEC msdb.dbo.sp_add_alert
 ,@enabled=1
 ,@delay_between_responses=60
 ,@include_event_description_in=1
-,@job_id=N'00000000-0000-0000-0000-000000000000'
-
-EXEC msdb.dbo.sp_add_alert 
- @name=N'Temp DB Out of Space'
-,@message_id=0
-,@severity=0
-,@enabled=1
-,@delay_between_responses=0
-,@include_event_description_in=1
-,@job_id=N'00000000-0000-0000-0000-000000000000'
-
-EXEC msdb.dbo.sp_add_alert 
- @name=N'Workload Group Stats above 5%'
-,@message_id=0
-,@severity=0
-,@enabled=1
-,@delay_between_responses=0
-,@include_event_description_in=0
 ,@job_id=N'00000000-0000-0000-0000-000000000000'
 
