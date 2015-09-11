@@ -7,10 +7,12 @@
    Objects are written out in XMLA format for easy re-creation in SSMS
    Objects include:
    Cubes
-   KPI
-   Fact Tables
+   KPIs
+   Measure Groups
+   Partitions
    Dimensions
-   Data   
+   Data Sources
+   DataSource Views
    
 .EXAMPLE
     10_SSAS_Objects.ps1 localhost
@@ -20,7 +22,7 @@
 
 
 .Inputs
-    ServerName, [SQLUser], [SQLPassword]
+    ServerName\instance, [SQLUser], [SQLPassword]
 
 .Outputs
 	
@@ -91,6 +93,70 @@ try
             mkdir $fullfolderPath | Out-Null
         }
     }
+
+    # Server Assemblies
+    $SvrAsmFolderPath = "$BaseFolder\$sqlinstance\10 - SSAS\Server Assemblies\"
+    if(!(test-path -path $SvrASmfolderPath))
+    {
+        mkdir $SvrAsmFolderPath | Out-Null
+    }
+
+    $SvrAssemblies=$svr.Assemblies
+    foreach ($SAsm in $SvrAssemblies)
+    {
+
+        $xsa = new-object System.Xml.XmlTextWriter("$SvrAsmFolderPath\Server Assembly - $($SAsm.Name).xmla",$encoding)
+        $xsa.Formatting = [System.Xml.Formatting]::Indented 
+        [Microsoft.AnalysisServices.Scripter]::WriteCreate($xsa,$svr,$SAsm,$true,$true) 
+        $xsa.Close() 
+
+        # Write con
+        Write-Output (" Server Assembly: {0}" -f $SAsm.Name)
+
+    }
+    
+    # Server Properties
+    $Props=$svr.ServerProperties
+
+    # Create some CSS for help in column formatting
+    $myCSS = 
+    "
+    table
+        {
+            Margin: 0px 0px 0px 4px;
+            Border: 1px solid rgb(190, 190, 190);
+            Font-Family: Tahoma;
+            Font-Size: 9pt;
+            Background-Color: rgb(252, 252, 252);
+        }
+    tr:hover td
+        {
+            Background-Color: rgb(150, 150, 220);
+            Color: rgb(255, 255, 255);
+        }
+    tr:nth-child(even)
+        {
+            Background-Color: rgb(242, 242, 242);
+        }
+    th
+        {
+            Text-Align: Left;
+            Color: rgb(150, 150, 220);
+            Padding: 1px 4px 1px 4px;
+        }
+    td
+        {
+            Vertical-Align: Top;
+            Padding: 1px 4px 1px 4px;
+        }
+    "
+
+
+    $myCSS | out-file "$fullfolderPath\HTMLReport.css" -Encoding ascii
+
+    # Export it
+    $Props | sort-object Name | select Name, Value, CurrentValue, DefaultValue, RequiresRestart, Type, Units, Category | ConvertTo-Html -PreContent "<h1>$SqlInstance</H1><H2>SSAS Engine Settings</h2>" -CSSUri "HtmlReport.css"| Set-Content "$fullfolderPath\SSAS_Engine_Settings.html"
+    Write-Output (" Server Engine Config Settings: {0}" -f $Props.count)
 
     # Write Out
     Write-Output "Scripting out SSAS Database Objects..."
@@ -200,6 +266,7 @@ try
         {
             mkdir $DimFolderPath | Out-Null
         }
+
         $Dimensions=New-object Microsoft.AnalysisServices.Dimension
         $Dimensions=$db.Dimensions
         foreach ($dim in $Dimensions)
@@ -219,6 +286,18 @@ try
         {
             mkdir $MiningFolderPath | Out-Null
         }
+
+        $MineStructs=$db.MiningStructures
+        foreach ($Mine in $MineStructs)
+        {
+            $xm = new-object System.Xml.XmlTextWriter("$MiningFolderPath\Mining Structure - $($Mine.Name).xmla",$encoding)
+            $xm.Formatting = [System.Xml.Formatting]::Indented 
+            [Microsoft.AnalysisServices.Scripter]::WriteCreate($xm,$svr,$Mine,$true,$true) 
+            $xm.Close() 
+
+            # Write con
+            Write-Output (" Mining Structure: {0}" -f $Mine.Name)
+        }
         
         # 6) Roles
         $RolesFolderPath = "$SSASDBFolderPath\Roles"
@@ -227,12 +306,42 @@ try
             mkdir $RolesFolderPath | Out-Null
         }
 
+        $Roles=$db.Roles
+        foreach ($Role in $Roles)
+        {
+
+            $xr = new-object System.Xml.XmlTextWriter("$RoleFolderPath\Role - $($Role.Name).xmla",$encoding)
+            $xr.Formatting = [System.Xml.Formatting]::Indented 
+            [Microsoft.AnalysisServices.Scripter]::WriteCreate($xr,$svr,$role,$true,$true) 
+            $xr.Close() 
+
+            # Write con
+            Write-Output (" Role: {0}" -f $Role.Name)
+
+        }
+
+
         # 7) Assemblies
         $AssemblyFolderPath = "$SSASDBFolderPath\Assemblies"
         if(!(test-path -path $AssemblyFolderPath))
         {
             mkdir $AssemblyFolderPath | Out-Null
         }
+
+        $Assemblies=$db.Assemblies
+        foreach ($Asm in $Assemblies)
+        {
+
+            $xa = new-object System.Xml.XmlTextWriter("$AssemblyFolderPath\Assembly - $($Asm.Name).xmla",$encoding)
+            $xa.Formatting = [System.Xml.Formatting]::Indented 
+            [Microsoft.AnalysisServices.Scripter]::WriteCreate($xa,$svr,$Asm,$true,$true) 
+            $xa.Close() 
+
+            # Write con
+            Write-Output (" Assembly: {0}" -f $Asm.Name)
+
+        }
+
 
         # 8) Data Sources
         $DSFolderPath = "$SSASDBFolderPath\DataSources"
@@ -241,6 +350,22 @@ try
             mkdir $DSFolderPath | Out-Null
         }
 
+        $DataSources=$db.DataSources
+        foreach ($DS in $DataSources)
+        {
+
+            $xds = new-object System.Xml.XmlTextWriter("$DSFolderPath\Data Source - $($DS.Name).xmla",$encoding)
+            $xds.Formatting = [System.Xml.Formatting]::Indented 
+            [Microsoft.AnalysisServices.Scripter]::WriteCreate($xds,$svr,$DS,$true,$true) 
+            $xds.Close() 
+
+            # Write con
+            Write-Output (" DataSource: {0}" -f $DS.Name)
+
+        }
+        
+
+
         # 9) Data Source Views
         $DSVFolderPath = "$SSASDBFolderPath\DataSourceViews"
         if(!(test-path -path $DSVFolderPath))
@@ -248,12 +373,94 @@ try
             mkdir $DSVFolderPath | Out-Null
         }
 
+        
+        $DataSourceViews=$db.DataSourceViews
+        foreach ($DSV in $DataSourceViews)
+        {
+
+            $xdsv = new-object System.Xml.XmlTextWriter("$DSVFolderPath\Data Source View - $($DSV.Name).xmla",$encoding)
+            $xdsv.Formatting = [System.Xml.Formatting]::Indented 
+            [Microsoft.AnalysisServices.Scripter]::WriteCreate($xdsv,$svr,$DSV,$true,$true) 
+            $xdsv.Close() 
+
+            # Write con
+            Write-Output (" DataSourceView: {0}" -f $DSV.Name)
+
+        }
+
+
         # End MD Scripting
         }
 
         else
+        # Start Tabular Scripting
         {
-            Write-Output ("Tabular Database: {0}" -f $db.Name)
+            Write-Output ("Tabular Database: {0}, Size:{1}" -f $db.Name, $db.EstimatedSize)
+
+
+            # 1) Connections
+            $ConnFolderPath = "$SSASDBFolderPath\Connections"
+            if(!(test-path -path $ConnFolderPath))
+            {
+                mkdir $ConnFolderPath | Out-Null
+            }
+
+            $Connections=$db.DataSources
+            foreach ($conn in $Connections)
+            {
+
+                $xc = new-object System.Xml.XmlTextWriter("$ConnFolderPath\Connection - $($conn.Name).xmla",$encoding)
+                $xc.Formatting = [System.Xml.Formatting]::Indented 
+                [Microsoft.AnalysisServices.Scripter]::WriteCreate($xc,$svr,$conn,$true,$true) 
+                $xc.Close() 
+
+                # Write con
+                Write-Output (" Connection: {0}" -f $Conn.Name)
+
+            }
+
+            # 2) Tables
+            $TabFolderPath = "$SSASDBFolderPath\Tables"
+            if(!(test-path -path $TabFolderPath))
+            {
+                mkdir $TabFolderPath | Out-Null
+            }
+
+            $Tables=$db.Dimensions
+            foreach ($Table in $Tables)
+            {
+
+                $xt = new-object System.Xml.XmlTextWriter("$TabFolderPath\Table - $($Table.Name).xmla",$encoding)
+                $xt.Formatting = [System.Xml.Formatting]::Indented 
+                [Microsoft.AnalysisServices.Scripter]::WriteCreate($xt,$svr,$table,$true,$true) 
+                $xt.Close() 
+
+                # Write con
+                Write-Output (" Table: {0}" -f $Table.Name)
+
+            }
+
+            # 3) Roles
+            $RoleFolderPath = "$SSASDBFolderPath\Roles"
+            if(!(test-path -path $RoleFolderPath))
+            {
+                mkdir $RoleFolderPath | Out-Null
+            }
+
+            $Roles=$db.Roles
+            foreach ($Role in $Roles)
+            {
+
+                $xr = new-object System.Xml.XmlTextWriter("$RoleFolderPath\Role - $($Role.Name).xmla",$encoding)
+                $xr.Formatting = [System.Xml.Formatting]::Indented 
+                [Microsoft.AnalysisServices.Scripter]::WriteCreate($xr,$svr,$role,$true,$true) 
+                $xr.Close() 
+
+                # Write con
+                Write-Output (" Role: {0}" -f $Role.Name)
+
+            }
+
         }
 
     } 
