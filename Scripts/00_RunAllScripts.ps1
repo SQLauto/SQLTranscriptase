@@ -16,6 +16,7 @@
 
 .Outputs
 
+	
 .NOTES
 	George Walkey
 	Richmond, VA USA
@@ -37,6 +38,7 @@ Param(
 # Rename them from .ps1 to .psm1 and put them in one of the folders pointed to by
 # $env:PSModulePath (the Windows Environment path)
 
+cls
 $startTime = get-date
 
 [string]$BaseFolder = (Get-Item -Path ".\" -Verbose).FullName
@@ -128,7 +130,7 @@ set-location $BaseFolder
 & .\07_Service_Creds.ps1 $SQLInstance
 & .\09_SSIS_Packages_from_MSDB.ps1 $SQLInstance $myuser $mypass
 & .\09_SSIS_Packages_from_SSISDB.ps1 $SQLInstance $myuser $mypass
-& .\10_SSAS_Databases.ps1 $SQLInstance $myuser $mypass
+& .\10_SSAS_Objects.ps1 $SQLInstance $myuser $mypass
 & .\11_SSRS_Objects.ps1 $SQLInstance $myuser $mypass
 & .\12_Security_Audit.ps1 $SQLInstance $myuser $mypass
 & .\13_PKI.ps1 $SQLInstance $myuser $mypass
