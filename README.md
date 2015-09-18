@@ -1,6 +1,8 @@
 # SQLTranscriptase 
 SQL Server Documentation in Powershell
 
+
+
 Please bring your ideas and suggestions by visting the Issues tab on the right
 
 Video Here:<br>
