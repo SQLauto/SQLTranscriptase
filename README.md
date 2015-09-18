@@ -1,7 +1,7 @@
 # SQLTranscriptase 
 SQL Server Documentation in Powershell
 
-Please bring your ideas and suggestions by visting the Issues tab on the left
+Please bring your ideas and suggestions by visting the Issues tab on the right
 
 Video Here:<br>
 http://usergroup.tv/videos/scripting-out-sql-server-for-documentation-and-disaster-recovery
