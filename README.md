@@ -16,13 +16,13 @@ http://www.sqlsaturday.com/422/eventhome.aspx
 
 Upcoming Presentations:
 
-Pittsburg, PA<br>
+Pittsburg, PA - October 3<br>
 http://www.sqlsaturday.com/440/eventhome.aspx
 
-Orlando, FL<br>
+Orlando, FL - October 10<br>
 http://www.sqlsaturday.com/452/eventhome.aspx
 
-Charlotte, NC<br>
+Charlotte, NC - October 17<br>
 http://www.sqlsaturday.com/442/eventhome.aspx
 
 
