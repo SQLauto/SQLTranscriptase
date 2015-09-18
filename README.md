@@ -8,7 +8,7 @@ Please bring your ideas and suggestions by visting the Issues tab on the right
 Video Here:<br>
 http://usergroup.tv/videos/scripting-out-sql-server-for-documentation-and-disaster-recovery
 
-First Debuted at SQL Saturday 381 in Richmond VA on March 21, 2015
+Previous Presentations:
 
 https://www.sqlsaturday.com/381/eventhome.aspx
 
