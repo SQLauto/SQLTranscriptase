@@ -18,11 +18,12 @@
     .sql files
 	
 .NOTES
+
 	George Walkey
 	Richmond, VA USA
+	
 .LINK
 	https://github.com/gwalkey
-
 #>
 
 Param(
@@ -177,10 +178,9 @@ if(!(test-path -path $fullfolderPath))
 # https://www.sqlskills.com/blogs/jonathan/
 # http://sqlperformance.com/author/jonathansqlskills-com
 # 
-# Load SQL SMO Assemblies
-[System.Reflection.Assembly]::LoadWithPartialName("Microsoft.SqlServer.Management.XEvent") | out-null
-[System.Reflection.Assembly]::LoadWithPartialName("Microsoft.SqlServer.Management.XEventEnum") | out-null
-[System.Reflection.Assembly]::LoadWithPartialName("Microsoft.SqlServer.Management.Sdk.Sfc") | out-null
+# Load SMO Assemblies
+Import-Module ".\LoadSQLSmo.psm1"
+LoadSQLSMO
 
 $conBuild = New-Object System.Data.SqlClient.SqlConnectionStringBuilder;
 $conBuild.psbase.DataSource = $SQLInstance

@@ -19,9 +19,10 @@
 	HTML Files
 	
 .NOTES
+	
 	George Walkey
 	Richmond, VA USA
-
+	
 .LINK
 	https://github.com/gwalkey
 	
@@ -57,9 +58,10 @@ if ($SQLInstance.Length -eq 0)
 # Working
 Write-Output "Server $SQLInstance"
 
-
+# Some Self-explanatory text
 $ShareArray = @()
-# We connect to the Windows Server Name, not the SQL Server Named Instance
+
+# WMI connects to the Windows Server Name, not the SQL Server Named Instance
 $WinServer = ($SQLInstance -split {$_ -eq "," -or $_ -eq "\"})[0]
 
 $old_ErrorActionPreference = $ErrorActionPreference

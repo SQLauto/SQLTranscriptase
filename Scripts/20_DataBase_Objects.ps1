@@ -37,6 +37,7 @@
 .NOTES
 	George Walkey
 	Richmond, VA USA
+	
 .LINK
 	https://github.com/gwalkey
 	
@@ -58,6 +59,7 @@ Write-Host  -f Yellow -b Black "20 - DataBase Objects (Triggers, Tables, Views, 
 Import-Module ".\LoadSQLSmo.psm1"
 LoadSQLSMO
 
+# Load Additional Libraries
 
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
@@ -171,8 +173,11 @@ else
 # Set Speed=On trick - doesnt work on Scripting - But thanks for the tip MVP Ben Miller
 # $tbl.SetDefaultInitFields([Microsoft.SqlServer.Management.SMO.Table], "CreateDate")
 
+# Find/Inspect other Server-Level Objects here
+Write-Output "Looking for Objects..."
 
-# Set scripter options to ensure only data is scripted
+
+# Set scripter options to ensure only schema is scripted
 $scripter.Options.ScriptSchema 	= $true;
 $scripter.Options.ScriptData 	= $false;
 
