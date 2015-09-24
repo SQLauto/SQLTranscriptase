@@ -13,17 +13,16 @@
     01_Server_Resource_Governor.ps1 server01 sa password
 
 .Inputs
-    ServerName\instance, [SQLUser], [SQLPassword]
+    ServerName, [SQLUser], [SQLPassword]
 
 .Outputs
 
 	
 .NOTES
-	George Walkey
-	Richmond, VA USA
 
+	
 .LINK
-	https://github.com/gwalkey
+
 	
 #>
 

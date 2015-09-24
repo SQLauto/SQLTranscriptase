@@ -126,13 +126,12 @@
     sys.availability_read_only_routing_lists    
     sys.availability_replicas
     
-	George Walkey
-	Richmond, VA USA
 
-.LINK
-	https://github.com/gwalkey
+
 	
+.LINK
 
+	
 #>
 
 Param(

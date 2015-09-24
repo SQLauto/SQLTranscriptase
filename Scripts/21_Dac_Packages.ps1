@@ -18,7 +18,14 @@
 
 	
 .NOTES
-    The DAC FX APIs are in flux, So I used SQLPackage.exe which does the trick, and is installed with SQL Server
+    SQLPackage.exe to create the .dacpac files
+    The Microsoft.SqlServer.Dac namespace from the DacFX library to register the Databases as Data-Tier Applications for Drift Reporting
+    
+    DaxFX 
+    http://www.microsoft.com/en-us/download/details.aspx?id=45886
+
+    Check the Registrations results here:
+    select * from msdb.dbo.sysdac_instances
 	
 	George Walkey
 	Richmond, VA USA
@@ -32,8 +39,10 @@
 Param(
   [string]$SQLInstance="localhost",
   [string]$myuser,
-  [string]$mypass
+  [string]$mypass,
+  [bool]$registerDAC=$false
 )
+
 
 Set-StrictMode -Version latest;
 
@@ -57,7 +66,9 @@ Write-Output "Server $SQLInstance"
 Import-Module ".\LoadSQLSmo.psm1"
 LoadSQLSMO
 
+
 # Load Additional Assemblies
+add-type -path "C:\Program Files (x86)\Microsoft SQL Server\120\DAC\bin\Microsoft.SqlServer.Dac.dll"
 
 
 
@@ -72,12 +83,14 @@ try
         Write-Output "Testing SQL Auth"
         $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
         $serverauth="sql"
+        $sqlver = $results.Column1
     }
     else
     {
         Write-Output "Testing Windows Auth"
     	$results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -QueryTimeout 10 -erroraction SilentlyContinue
         $serverauth = "win"
+        $sqlver = $results.Column1
     }
 
     if($results -ne $null)
@@ -95,6 +108,15 @@ catch
     Set-Location $BaseFolder
 	exit
 }
+
+# Skip if server not 2012+
+if (!($sqlver -like "10.5*") -and !($sqlver -like "11.0*") -and !($sqlver -like "12.0*") -and !($sqlver -like "13.0*"))
+{
+    Write-Output "Dac Packages only supported on SQL Server 2008 R2 or higher"
+    set-location $BaseFolder
+    exit
+}
+
 
 # Set Local Vars
 $server = $SQLInstance
@@ -121,11 +143,53 @@ if(!(test-path -path $Output_path))
     mkdir $Output_path | Out-Null
 }
 
+# Drift Reports
+$DriftOutput_path  = "$BaseFolder\$SQLInstance\21 - DAC Packages\DriftReports\"
+if(!(test-path -path $DriftOutput_path))
+{
+    mkdir $DriftOutput_path | Out-Null
+}
 
-# Check for Existence of DAC Packages
+
+# Check for existence of SqlPackage.exe and get latest version
+$pkgver = $null;
+
+$pkgexe = "C:\Program Files (x86)\Microsoft SQL Server\100\DAC\bin\sqlpackage.exe"
+if((test-path -path $pkgexe))
+{
+    $pkgver = $pkgexe
+}
+
+$pkgexe = "C:\Program Files (x86)\Microsoft SQL Server\110\DAC\bin\sqlpackage.exe"
+if((test-path -path $pkgexe))
+{
+    $pkgver = $pkgexe
+}
+
+$pkgexe = "C:\Program Files (x86)\Microsoft SQL Server\120\DAC\bin\sqlpackage.exe"
+if((test-path -path $pkgexe))
+{
+    $pkgver = $pkgexe
+}
+
+$pkgexe = "C:\Program Files (x86)\Microsoft SQL Server\130\DAC\bin\sqlpackage.exe"
+if((test-path -path $pkgexe))
+{
+    $pkgver = $pkgexe
+}
+
+If (!($pkgver))
+{
+    Write-Output "SQLPackage.exe not found, exiting"
+    exit
+}
+
+# 
 Write-Output "Exporting Dac Packages..."
 
+# Create Batch file to run below
 $myoutstring = "@ECHO OFF`n" | out-file -FilePath "$Output_path\DacExtract.cmd" -Force -Encoding ascii
+
 
 foreach($sqlDatabase in $srv.databases)
 {
@@ -135,6 +199,8 @@ foreach($sqlDatabase in $srv.databases)
 
     # Strip brackets from DBname
     $db = $sqlDatabase
+    $myDB = $db.name
+    $myServer = $SQLInstance   
     $fixedDBName = $db.name.replace('[','')
     $fixedDBName = $fixedDBName.replace(']','')
 
@@ -144,42 +210,51 @@ foreach($sqlDatabase in $srv.databases)
         mkdir $output_path | Out-Null
     }
 
-    # Script Out
-    $pkgexe = "C:\Program Files (x86)\Microsoft SQL Server\100\DAC\bin\sqlpackage.exe"
-    if((test-path -path $pkgexe))
-    {
-        $pkgver = $pkgexe
-    }
-
-    $pkgexe = "C:\Program Files (x86)\Microsoft SQL Server\110\DAC\bin\sqlpackage.exe"
-    if((test-path -path $pkgexe))
-    {
-        $pkgver = $pkgexe
-    }
-
-    $pkgexe = "C:\Program Files (x86)\Microsoft SQL Server\120\DAC\bin\sqlpackage.exe"
-    if((test-path -path $pkgexe))
-    {
-        $pkgver = $pkgexe
-    }
-
-    $pkgexe = "C:\Program Files (x86)\Microsoft SQL Server\130\DAC\bin\sqlpackage.exe"
-    if((test-path -path $pkgexe))
-    {
-        $pkgver = $pkgexe
-    }
-
     set-location $Output_path
-    
-    $myDB = $db.name
-    $myServer = $SQLInstance   
-    $myoutstring = [char]34+$pkgver + [char]34+ " /action:extract /sourcedatabasename:$myDB /sourceservername:$MyServer /targetfile:$MyDB.dacpac `n"
+       
+    # append commands to SQLPACKAGE.EXE batch file    
+    if ($serverauth -eq "win")
+    {
+        $myoutstring = [char]34+$pkgver + [char]34+ " /action:extract /sourcedatabasename:$myDB /sourceservername:$MyServer /targetfile:$MyDB.dacpac `n"
+    }
+    else
+    {
+        $myoutstring = [char]34+$pkgver + [char]34+ " /action:extract /sourcedatabasename:$myDB /sourceservername:$MyServer /targetfile:$MyDB.dacpac /sourceuser:$myuser /sourcepassword:$mypass `n"
+    }
     $myoutstring | out-file -FilePath "$Output_path\DacExtract.cmd" -Encoding ascii -append
+
+    # Register the Database as a Data Tier Application - if command-line parameter is true
+    if ($registerDAC)
+    {
+        ## Specify the DAC metadata.
+        $applicationname = $fixedDBName
+        [system.version]$version = '1.0.0.0'
+        $description = "Registered during DacPac Script-Out pass on "+(Get-Date).ToString()
+        # Register as 1.0.0.0    
+        Write-Output "Registering $MyDB ..."
+        try
+        {
+            $dac = new-object Microsoft.SqlServer.Dac.DacServices "server=$sqlinstance"
+            $dac.register($myDB, $myDB, $version, $description)
+        }
+        catch
+        {
+            Write-Output "DacServices Register of $myDB failed"
+        }
+        $dac = $null;
+    }
+    
+    # Create Drift Report batch file
+    $myDriftFileName = $DriftOutput_path+"\"+$myDB+"_DriftReport.cmd"
+    $myDriftReportName = $myDB+"_DriftReport.xml"
+    [char]34 + $pkgver + [char]34 + " /A:DriftReport /tsn:$myServer /tdn:$myDB /op:$myDriftReportName `n $myDriftReportName `n" | out-file -FilePath $myDriftFileName -Force -Encoding ascii
 
 }
 
-# Run the batch file
+# Run the SQLPACKAGE batch file
 .\DacExtract.cmd
+
+# Remember to run the Drift Report batch files in the DriftReports folder
 
 remove-item -Path "$Output_path\DacExtract.cmd" -Force -ErrorAction SilentlyContinue
 

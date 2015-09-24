@@ -14,7 +14,7 @@
     16_Audits.ps1 server01 sa password
 
 .Inputs
-    ServerName\instance, [SQLUser], [SQLPassword]
+    ServerName, [SQLUser], [SQLPassword]
 
 .Outputs
 
@@ -24,11 +24,8 @@
     https://msdn.microsoft.com/en-us/library/microsoft.sqlserver.management.smo.audit.enumserverauditspecification.aspx
     https://msdn.microsoft.com/en-us/library/microsoft.sqlserver.management.smo.audit.enumdatabaseauditspecification.aspx
 
-	George Walkey
-	Richmond, VA USA
-
+	
 .LINK
-	https://github.com/gwalkey
 
 	
 #>

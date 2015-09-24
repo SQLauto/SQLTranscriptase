@@ -20,6 +20,7 @@
 .EXAMPLE
     10_SSAS_Objects.ps1 server01 sa password
 
+
 .Inputs
     ServerName\instance, [SQLUser], [SQLPassword]
 
@@ -28,6 +29,8 @@
 .NOTES
 
     https://msdn.microsoft.com/en-us/library/microsoft.analysisservices(v=sql.120).aspx
+	
+
 
 	George Walkey
 	Richmond, VA USA

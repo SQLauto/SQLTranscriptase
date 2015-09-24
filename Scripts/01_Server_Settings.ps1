@@ -15,17 +15,15 @@
     01_Server_Settings.ps1 server01 sa password
 
 .Inputs
-    ServerName\instance, [SQLUser], [SQLPassword]
+    ServerName, [SQLUser], [SQLPassword]
 
 .Outputs
 	HTML Files
 	
 .NOTES
-	George Walkey
-	Richmond, VA USA
 
+	
 .LINK
-	https://github.com/gwalkey
 
 	
 #>

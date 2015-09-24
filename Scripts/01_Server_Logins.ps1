@@ -30,11 +30,9 @@
     # 7
     http://www.microsoft.com/en-us/download/details.aspx?id=7887
 	
-	George Walkey
-	Richmond, VA USA
 
 .LINK
-	https://github.com/gwalkey
+
 	
 	
 #>

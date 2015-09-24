@@ -14,17 +14,15 @@
     01_Server_Storage.ps1 server01 sa password
 
 .Inputs
-    ServerName\Instance, [SQLUser], [SQLPassword]
+    ServerName, [SQLUser], [SQLPassword]
 
 .Outputs
 	HTML File
 	
 .NOTES
-	George Walkey
-	Richmond, VA USA
 
+	
 .LINK
-	https://github.com/gwalkey
 
 	
 #>

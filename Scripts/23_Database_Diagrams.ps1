@@ -18,11 +18,10 @@
 
 	
 .NOTES
-	George Walkey
-	Richmond, VA USA
 
+	
 .LINK
-	https://github.com/gwalkey
+
 	
 #>
 
@@ -31,6 +30,8 @@ Param(
   [string]$myuser,
   [string]$mypass
 )
+
+Set-StrictMode -Version latest;
 
 [string]$BaseFolder = (Get-Item -Path ".\" -Verbose).FullName
 
@@ -149,12 +150,10 @@ foreach($sqlDatabase in $srv.databases)
     }
 
     # Any results?
-    if ($results.count -gt 0)
-    {
-        Write-Output ("Scripting out {0} Database Diagrams for: {1}" -f $results.count, $fixedDBName)
-    }
-    else
-        {continue}
+    if ($results -eq $null) {continue}
+    
+    Write-Output ("Scripting out Database Diagrams for: {0}" -f $fixedDBName)
+    
     
     # One Output folder per DB
     if(!(test-path -path $output_path))

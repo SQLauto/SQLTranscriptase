@@ -18,11 +18,9 @@
 
 	
 .NOTES
-	George Walkey
-	Richmond, VA USA
 
+	
 .LINK
-	https://github.com/gwalkey
 
 	
 #>
@@ -32,6 +30,8 @@ Param(
   [string]$myuser,
   [string]$mypass
 )
+
+Set-StrictMode -Version latest;
 
 [string]$BaseFolder = (Get-Item -Path ".\" -Verbose).FullName
 

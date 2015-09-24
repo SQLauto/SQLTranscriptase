@@ -21,11 +21,8 @@
     https://msdn.microsoft.com/en-us/library/microsoft.sqlserver.management.dmf.aspx
     https://msdn.microsoft.com/en-us/library/microsoft.sqlserver.management.facets.aspx
 	
-	George Walkey
-	Richmond, VA USA
-
 .LINK
-	https://github.com/gwalkey
+
 	
 #>
 
@@ -57,6 +54,7 @@ Import-Module ".\LoadSQLSmo.psm1"
 LoadSQLSMO
 
 # Load Additional Assemblies
+add-type -path "C:\Program Files (x86)\Microsoft SQL Server\120\SDK\Assemblies\Microsoft.SqlServer.Dmf.dll"
 
 
 # Server connection check
@@ -97,10 +95,11 @@ catch
 # Set Local Vars
 $server = $SQLInstance
 
-
+# Connect
 if ($serverauth -eq "win")
 {
     $srv = New-Object "Microsoft.SqlServer.Management.SMO.Server" $server
+    $conn = New-Object Microsoft.SQlServer.Management.Sdk.Sfc.SqlStoreConnection("server='$sqlinstance';Trusted_Connection=true")
 }
 else
 {
@@ -108,10 +107,11 @@ else
     $srv.ConnectionContext.LoginSecure=$false
     $srv.ConnectionContext.set_Login($myuser)
     $srv.ConnectionContext.set_Password($mypass)
+    $conn = New-Object Microsoft.SQlServer.Management.Sdk.Sfc.SqlStoreConnection("server='$sqlinstance';Trusted_Connection=false; User Id=$myuser; Password=$mypass")
 }
 
 
-# Output Folder
+# Prep Output Folder
 Write-Output "$SQLInstance - PBM"
 $Output_path  = "$BaseFolder\$SQLInstance\22 - PBM\"
 if(!(test-path -path $Output_path))
@@ -119,12 +119,110 @@ if(!(test-path -path $Output_path))
     mkdir $Output_path | Out-Null	
 }
 
+# Policies
+$POutput_path  = "$BaseFolder\$SQLInstance\22 - PBM\Policies\"
+if(!(test-path -path $POutput_path))
+{
+    mkdir $POutput_path | Out-Null	
+}
 
-# Check for Existence of DAC Packages
-Write-Output "Exporting PBM Policies and Facets..."
+# Conditions
+$COutput_path  = "$BaseFolder\$SQLInstance\22 - PBM\Conditions\"
+if(!(test-path -path $COutput_path))
+{
+    mkdir $COutput_path | Out-Null
+}
 
-# Script Out
+# Scripter function
+function CopyObjectsToFiles($objects, $outDir) {
+	
+	if (-not (Test-Path $outDir)) {
+		[System.IO.Directory]::CreateDirectory($outDir) | out-null
+	}
+	
+	foreach ($o in $objects) { 
+	
+		if ($o -ne $null) {
+			
+			$schemaPrefix = ""
+			
+			if ($o.Schema -ne $null -and $o.Schema -ne "") {
+				$schemaPrefix = $o.Schema + "."
+			}
+		
+			$fixedOName = $o.name.replace('\','_')			
+			$scripter.Options.FileName = $outDir + $schemaPrefix + $fixedOName + ".sql"
+            try
+            {                
+                $urn = new-object Microsoft.SQlserver.Management.sdk.sfc.urn($o.Urn);
+                $scripter.Script($urn)
+            }
+            catch
+            {
+                $msg = "Cannot script this element:"+$o
+                Write-Output $msg
+            }
+		}
+	}
+}
 
+
+Write-Output "Exporting PBM Policies and Conditions..."
+
+# Script Out Policies
+$PolicyStore = New-Object Microsoft.SqlServer.Management.DMF.PolicyStore($conn)
+$MyP = $PolicyStore.Policies | Where-Object { -not $_.IsSystemObject }
+
+foreach($policy in $MyP)
+{
+    $myPName = $Policy.Name
+    $myfixedName = $myPName.replace('\','_')
+    $myfixedName = $myfixedName.replace('!','_')
+    $myfixedName = $myfixedName.replace('/','_')
+    $myfixedName = $myfixedName.replace('%','_')
+    $Outfilename = $POutput_path+"$myfixedName.xml"
+    $Outfilename
+    $xmlWriter = [System.Xml.XmlWriter]::Create($Outfilename)
+    $policy.Serialize($xmlWriter)
+    $xmlWriter.Close()
+}
+
+
+# Script out Conditions
+#$Cond_Store=New-Object Microsoft.SqlServer.Management.Dmf.PolicyCondition ($PolicyStore,'TheConditions')
+$myC = $PolicyStore.Conditions | Where-Object { -not $_.IsSystemObject }
+
+foreach($Condition in $myC)
+{
+    $myCName = $Condition.Name
+    $myfixedName = $myCName.replace('\','_')
+    $myfixedName = $myfixedName.replace('!','_')
+    $myfixedName = $myfixedName.replace('/','_')
+    $myfixedName = $myfixedName.replace('%','_')
+    $Outfilename = $COutput_path+"$myfixedName.xml"
+    $Outfilename
+    $xmlWriter = [System.Xml.XmlWriter]::Create($Outfilename)
+    $Condition.Serialize($xmlWriter)
+    $xmlWriter.Close()
+}
+
+try
+{
+    Write-Output ("Wrote {0} Policies" -f $myP.Count)
+}
+catch
+{
+    Write-Output "No Policies found"
+}
+
+try
+{
+    Write-Output ("Wrote {0} Conditions" -f $myC.Count)
+}
+catch
+{
+    Write-Output "No Conditions found"
+}
 # Return Home
 set-location $BaseFolder
 

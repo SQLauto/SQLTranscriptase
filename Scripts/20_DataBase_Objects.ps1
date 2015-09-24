@@ -30,17 +30,13 @@
     20_Database_Objects.ps1 -SQLInstance localhost -myuser username -mypass password -myDatabase AdventureWorks2014 -mytable Person.Address
 
 .Inputs
-    ServerName\instance, [SQLUser], [SQLPassword], [myDatabase]
+    ServerName, [SQLUser], [SQLPassword], [myDatabase]
 
 .Outputs
 
 .NOTES
-	George Walkey
-	Richmond, VA USA
 
 .LINK
-	https://github.com/gwalkey
-	
 
 	
 #>
@@ -377,7 +373,9 @@ foreach($sqlDatabase in $srv.databases)
     # -------------------------
     # Start Individual Objects
     # -------------------------
-    
+    Write-Output "Looking for Dac Packages, Db Diagrams and Plan Guides"
+
+
     # Tables
     Write-Output "$fixedDBName - Tables"
 

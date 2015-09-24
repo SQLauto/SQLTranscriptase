@@ -12,18 +12,15 @@
     00_RunAllScripts.ps1 server01 sa password
 
 .Inputs
-    ServerName\instance, [SQLUser], [SQLPassword]
+    ServerName, [SQLUser], [SQLPassword]
 
 .Outputs
 
 	
 .NOTES
-	George Walkey
-	Richmond, VA USA
-
-.LINK
-	https://github.com/gwalkey
+	Testing TFS Versioning
 	
+.LINK
 	
 #>
 
@@ -142,12 +139,12 @@ set-location $BaseFolder
 # & .\18_Replication.ps1 $SQLInstance $myuser $mypass
 # & .\19_AlwaysOn.ps1 $SQLInstance $myuser $mypass
 & .\21_Dac_Packages.ps1 $SQLInstance $myuser $mypass
-# & .\22_Policy_Based_Mgmt.ps1 $SQLInstance $myuser $mypass
+& .\22_Policy_Based_Mgmt.ps1 $SQLInstance $myuser $mypass
 & .\23_Database_Diagrams.ps1 $SQLInstance $myuser $mypass
 & .\24_Plan_Guides.ps1 $SQLInstance $myuser $mypass
 
-#& .\01_Server_Startup_Procs.ps1 $SQLInstance $myuser $mypass
-#& .\20_DataBase_Objects.ps1 $SQLInstance $myuser $mypass
+
+
 
 Write-Output "`r`n"
 $ElapsedTime = ((get-date) - $startTime)

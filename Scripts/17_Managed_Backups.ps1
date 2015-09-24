@@ -14,22 +14,17 @@
 .EXAMPLE
     17_Managed_Backups.ps1 server01 sa password
 
+.NOTES
+
+
 .Inputs
-    ServerName\instance, [SQLUser], [SQLPassword]
+    ServerName, [SQLUser], [SQLPassword]
 
 .Outputs
 
 
-	
-.NOTES
-	https://msdn.microsoft.com/en-us/library/dn449497(v=sql.120).aspx
-	
-	George Walkey
-	Richmond, VA USA
-
 .LINK
-	https://github.com/gwalkey
-		
+    https://msdn.microsoft.com/en-us/library/dn449497(v=sql.120).aspx
     
 #>
 

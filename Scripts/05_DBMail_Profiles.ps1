@@ -12,17 +12,15 @@
     05_DBMail_Profiles.ps1 server01 sa password
 	
 .Inputs
-    ServerName\instance, [SQLUser], [SQLPassword]
+    ServerName, [SQLUser], [SQLPassword]
 
 .Outputs
     DBMail Profiles to DBMAIL_Profiles.sql
 	
 .NOTES
-	George Walkey
-	Richmond, VA USA
-
+	
 .LINK
-	https://github.com/gwalkey
+
 	
 #>
 
