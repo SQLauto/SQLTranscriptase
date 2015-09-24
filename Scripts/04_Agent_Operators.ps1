@@ -12,9 +12,10 @@
     04_Agent_Operators.ps1 server01 sa password
 	
 .Inputs
-    ServerName, [SQLUser], [SQLPassword]
+    ServerName\instance, [SQLUser], [SQLPassword]
 
 .Outputs
+
 
 .NOTES
 	George Walkey
@@ -26,7 +27,7 @@
 #>
 
 Param(
-  [string]$SQLInstance,
+  [string]$SQLInstance='localhost',
   [string]$myuser,
   [string]$mypass
 )
@@ -42,12 +43,6 @@ Write-Host  -f Yellow -b Black "04 - Agent Operators"
 Import-Module ".\LoadSQLSmo.psm1"
 LoadSQLSMO
 
-# assume localhost
-if ($SQLInstance.length -eq 0)
-{
-	Write-Output "Assuming localhost"
-	$Sqlinstance = 'localhost'
-}
 
 # Usage Check
 if ($SQLInstance.Length -eq 0) 

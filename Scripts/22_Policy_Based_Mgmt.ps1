@@ -1,23 +1,26 @@
-<#
+﻿<#
 .SYNOPSIS
-    Gets the SQL Agent Database Mail Profiles
+   Gets the Policy Based Mgmt Objects on the target server
 	
 .DESCRIPTION
-    Writes the SQL Agent Database Mail Profiles out to DBMail_Accounts.sql
+   Writes the Policies and Facets out to the "22 - PBM" folder
+      
+.EXAMPLE
+    22_Policy_Based_Mgmt.ps1 localhost
 	
 .EXAMPLE
-    05_DBMail_Profiles.ps1 localhost
-	
-.EXAMPLE
-    05_DBMail_Profiles.ps1 server01 sa password
-	
+    22_Policy_Based_Mgmt.ps1 server01 sa password
+
 .Inputs
     ServerName\instance, [SQLUser], [SQLPassword]
 
 .Outputs
-    DBMail Profiles to DBMAIL_Profiles.sql
+
 	
 .NOTES
+    https://msdn.microsoft.com/en-us/library/microsoft.sqlserver.management.dmf.aspx
+    https://msdn.microsoft.com/en-us/library/microsoft.sqlserver.management.facets.aspx
+	
 	George Walkey
 	Richmond, VA USA
 
@@ -27,33 +30,34 @@
 #>
 
 Param(
-  [string]$SQLInstance='localhost',
+  [string]$SQLInstance="localhost",
   [string]$myuser,
   [string]$mypass
 )
 
+Set-StrictMode -Version latest;
 
 [string]$BaseFolder = (Get-Item -Path ".\" -Verbose).FullName
 
-#  Script Name
-Write-Host  -f Yellow -b Black "05 - DBMail Profiles"
+Write-Host  -f Yellow -b Black "22 - Policy Based Mgmt Objects"
+
+# Usage Check
+if ($SQLInstance.Length -eq 0) 
+{
+    Write-host -f yellow "Usage: ./22_Policy_Based_Mgmt.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
+    Set-Location $BaseFolder
+    exit
+}
+
+# Working
+Write-Output "Server $SQLInstance"
 
 # Load SMO Assemblies
 Import-Module ".\LoadSQLSmo.psm1"
 LoadSQLSMO
 
+# Load Additional Assemblies
 
-# Usage Check
-if ($SQLInstance.Length -eq 0) 
-{
-    Write-host -f yellow "Usage: ./05_DBMail_Profiles.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
-    Set-Location $BaseFolder
-    exit
-}
-
-
-# Working
-Write-Output "Server $SQLInstance"
 
 # Server connection check
 try
@@ -90,11 +94,10 @@ catch
 	exit
 }
 
+# Set Local Vars
+$server = $SQLInstance
 
-#Set the server to script from 
-$Server= $SQLInstance;
 
-#Get a server object which corresponds to the default instance 
 if ($serverauth -eq "win")
 {
     $srv = New-Object "Microsoft.SqlServer.Management.SMO.Server" $server
@@ -107,41 +110,22 @@ else
     $srv.ConnectionContext.set_Password($mypass)
 }
 
-# Get Database Mail configuration objects
-$ProfileCount = $srv.Mail.Profiles.Count
 
-# Export Them
-if ($ProfileCount -gt 0)
+# Output Folder
+Write-Output "$SQLInstance - PBM"
+$Output_path  = "$BaseFolder\$SQLInstance\22 - PBM\"
+if(!(test-path -path $Output_path))
 {
-    $DBMProfiles = $srv.Mail.Profiles
-
-    # Create output folder
-
-    $fullfolderPath = "$BaseFolder\$sqlinstance\05 - DBMail Profiles"
-    if(!(test-path -path $fullfolderPath))
-    {
-    	mkdir $fullfolderPath | Out-Null
-    }
-
-    # Create Output File
-    New-Item "$fullfolderPath\DBMail_Profiles.sql" -type file -force  |Out-Null
-    
-    # Row Process
-    Foreach ($row in $DBMProfiles)
-    {
-        $ProfileScript = $row.Script()
-        $ProfileScript | out-file "$fullfolderPath\DBMail_Profiles.sql" -Encoding ascii -Append
-    }
-    
-    Write-Output ("{0} DBMail Profiles Exported" -f $DBMProfiles.count)
-}
-else
-{
-    Write-Output "No Database Mail Profiles found on $SQLInstance"
-    echo null > "$BaseFolder\$SQLInstance\05 - No Database Mail Profiles found.txt"
-    Set-Location $BaseFolder    
+    mkdir $Output_path | Out-Null	
 }
 
+
+# Check for Existence of DAC Packages
+Write-Output "Exporting PBM Policies and Facets..."
+
+# Script Out
+
+# Return Home
 set-location $BaseFolder
 
 

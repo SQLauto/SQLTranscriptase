@@ -20,13 +20,15 @@
 .EXAMPLE
     10_SSAS_Objects.ps1 server01 sa password
 
-
 .Inputs
     ServerName\instance, [SQLUser], [SQLPassword]
 
 .Outputs
 	
 .NOTES
+
+    https://msdn.microsoft.com/en-us/library/microsoft.analysisservices(v=sql.120).aspx
+
 	George Walkey
 	Richmond, VA USA
 
@@ -53,12 +55,6 @@ Write-Host  -f Yellow -b Black "10 - SSAS Objects"
 Import-Module ".\LoadSQLSmo.psm1"
 LoadSQLSMO
 
-# assume localhost
-if ($SQLInstance.length -eq 0)
-{
-	Write-Output "Assuming localhost"
-	$SQLInstance = 'localhost'
-}
 
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
@@ -310,7 +306,7 @@ try
         foreach ($Role in $Roles)
         {
 
-            $xr = new-object System.Xml.XmlTextWriter("$RoleFolderPath\Role - $($Role.Name).xmla",$encoding)
+            $xr = new-object System.Xml.XmlTextWriter("$RolesFolderPath\Role - $($Role.Name).xmla",$encoding)
             $xr.Formatting = [System.Xml.Formatting]::Indented 
             [Microsoft.AnalysisServices.Scripter]::WriteCreate($xr,$svr,$role,$true,$true) 
             $xr.Close() 

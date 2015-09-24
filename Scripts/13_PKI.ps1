@@ -25,18 +25,21 @@
     AKA, MS has no export routine for Sym/ASym keys
 
 .Inputs
-    ServerName, [SQLUser], [SQLPassword]
+    ServerName\instance, [SQLUser], [SQLPassword]
+
+.Outputs
 
 .NOTES
 	George Walkey
 	Richmond, VA USA
+
 .LINK
 	https://github.com/gwalkey
 
 #>
 
 Param(
-  [string]$SQLInstance,
+  [string]$SQLInstance='localhost',
   [string]$myuser,
   [string]$mypass
 )
@@ -50,13 +53,6 @@ Write-Host  -f Yellow -b Black "13 - PKI (Master keys, Asym Keys, Sym Keys, Cert
 Import-Module ".\LoadSQLSmo.psm1"
 LoadSQLSMO
 
-
-# assume localhost
-if ($SQLInstance.length -eq 0)
-{
-	Write-Output "Assuming localhost"
-	$SQLInstance = 'localhost'
-}
 
 # Usage Check
 if ($SQLInstance.Length -eq 0) 

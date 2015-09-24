@@ -1,18 +1,15 @@
 ﻿<#
 .SYNOPSIS
-    Gets the .NET Assemblies registered on the target server
+    Gets the Database Diagrams from the target server
 	
 .DESCRIPTION
-   Writes the .NET Assemblies out to the "03 - NET Assemblies" folder
-   One folder per Database
-   One file for each registered DLL
-   CREATE ASSEMBLY with the binary as a HEX STRING
-   
+   Writes INSERT Statements into [database].[dbo].[sysdiagrams]
+
 .EXAMPLE
-    03_NET_Assemblies.ps1 localhost
+    23_Database_Diagrams.ps1 localhost
 	
 .EXAMPLE
-    03_NET_Assemblies.ps1 server01 sa password
+    23_Database_Diagrams.ps1 localhost
 
 .Inputs
     ServerName\instance, [SQLUser], [SQLPassword]
@@ -30,14 +27,14 @@
 #>
 
 Param(
-  [string]$SQLInstance='localhost',
+  [string]$SQLInstance="localhost",
   [string]$myuser,
   [string]$mypass
 )
 
 [string]$BaseFolder = (Get-Item -Path ".\" -Verbose).FullName
 
-Write-Host  -f Yellow -b Black "03 - .NET Assemblies"
+Write-Host  -f Yellow -b Black "23 - Database Diagrams"
 
 # Load SMO Assemblies
 Import-Module ".\LoadSQLSmo.psm1"
@@ -47,7 +44,7 @@ LoadSQLSMO
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
 {
-    Write-Host -f yellow "Usage: ./03_NET_Assemblies.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
+    Write-Host -f yellow "Usage: ./23_Database_Diagrams.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
     Set-Location $BaseFolder
     exit
 }
@@ -110,7 +107,7 @@ else
 
 
 # Create output folder
-$output_path = "$BaseFolder\$SQLInstance\03 - NET Assemblies\"
+$output_path = "$BaseFolder\$SQLInstance\23 - Database Diagrams\"
 if(!(test-path -path $output_path))
     {
         mkdir $output_path | Out-Null
@@ -130,28 +127,14 @@ foreach($sqlDatabase in $srv.databases)
     $db = $sqlDatabase
     $fixedDBName = $db.name.replace('[','')
     $fixedDBName = $fixedDBName.replace(']','')
-    $output_path = "$BaseFolder\$SQLInstance\03 - NET Assemblies\$fixedDBname"
-    
+    $output_path = "$BaseFolder\$SQLInstance\23 - Database Diagrams\$fixedDBname"
                
-    # Get Assemblies
+    # Get Diagrams
     $mySQLquery = 
     "
     USE $fixedDBName
     GO
-    SELECT  
-    a.name as [AName],
-    af.name as [DLL],
-    'CREATE ASSEMBLY [' + a.name + '] FROM 0x' +
-    convert(varchar(max),af.content,2) +
-     ' WITH PERMISSION_SET=' +
-    case 
-	    when a.permission_set=1 then 'SAFE' 
-	    when a.permission_set=2 then 'EXTERNAL_ACCESS' 
-	    when a.permission_set=3 then 'UNSAFE'
-    end as 'Content'
-    FROM sys.assemblies a
-    INNER JOIN sys.assembly_files af ON a.assembly_id = af.assembly_id 
-    WHERE a.name <> 'Microsoft.SqlServer.Types' 
+    select [name], [principal_id], [version], [definition] from dbo.sysdiagrams
     "
 
     # Run SQL
@@ -168,25 +151,58 @@ foreach($sqlDatabase in $srv.databases)
     # Any results?
     if ($results.count -gt 0)
     {
-        Write-Output "Scripting out .NET Assemblies for: "$fixedDBName
+        Write-Output ("Scripting out {0} Database Diagrams for: {1}" -f $results.count, $fixedDBName)
+    }
+    else
+        {continue}
+    
+    # One Output folder per DB
+    if(!(test-path -path $output_path))
+    {
+        mkdir $output_path | Out-Null
     }
 
-    foreach ($assembly in $results)
-    {        
-        # One Sub for each DB
-        if(!(test-path -path $output_path))
-        {
-            mkdir $output_path | Out-Null
-        }
 
-        $myoutputfile = $output_path+"\"+$assembly.AName+'.sql'        
-        $myoutputstring = $assembly.Content
-        $myoutputstring | out-file -FilePath $myoutputfile -encoding ascii -width 50000000
+    foreach ($diagram in $results)
+    {        
+        $DName = $diagram.name
+
+        $dquery = "`
+        Use "+$sqlDatabase.Name+";"+
+        "
+
+        select
+    	'insert into dbo.sysdiagrams ([name], [principal_id], [version], [definition]) values ('+
+    	char(39)+[name]+ char(39)+', '+
+    	convert(nvarchar,[principal_id])+', '+
+    	convert(nvarchar,[Version])+', '+
+    	'0x'+convert(varchar(max),[definition],2) + 
+    	')' as 'column1'
+        from  dbo.sysdiagrams
+        where [name] = '$DName'
+        "
+
+        #Write-Output $dquery
+        
+        # Dump Diagrams
+        if ($serverauth -eq "win")
+        {
+            $dresults = Invoke-Sqlcmd -MaxCharLength 100000000 -ServerInstance $SQLInstance -Query $dquery 
+        }
+        else
+        {     
+            $dresults = Invoke-Sqlcmd -MaxCharLength 100000000 -ServerInstance $SQLInstance -Query $dquery -Username $myuser -Password $mypass
+        }
+        # Write Out
+        $myoutputfile = $output_path+"\"+$DName+".sql"
+        $dresults.column1 | out-file -FilePath $myoutputfile -append -encoding ascii -width 10000000
+        
     } 
             
 
 # Process Next Database
 }
+c:
 
 
 # finish

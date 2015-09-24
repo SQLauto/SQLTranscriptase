@@ -13,15 +13,12 @@
     01_Server_Logins.ps1 server01 sa password
 
 .Inputs
-    ServerName, [SQLUser], [SQLPassword]
+    ServerName\instance, [SQLUser], [SQLPassword]
 
 .Outputs
 
 	
 .NOTES
-
-	George Walkey
-	Richmond, VA USA
 
     # First, install the Powershell AD Module
     # 8.1
@@ -33,8 +30,12 @@
     # 7
     http://www.microsoft.com/en-us/download/details.aspx?id=7887
 	
+	George Walkey
+	Richmond, VA USA
+
 .LINK
 	https://github.com/gwalkey
+	
 	
 #>
 
@@ -50,6 +51,55 @@ Param(
 Import-Module ".\LoadSQLSmo.psm1"
 LoadSQLSMO
 
+
+# First, test for Domain Membership 
+$OnDomain = $false
+if ((gwmi win32_computersystem).partofdomain -eq $true) 
+{
+    $OnDomain = $true
+}
+
+# If we are part of a Domain, Load the AD Module if it is installed on the user's system
+if ($OnDomain -eq $true)
+{
+    $ADModuleExists = $false
+    try
+    {
+        $old_ErrorActionPreference = $ErrorActionPreference
+        $ErrorActionPreference = 'SilentlyContinue'
+    
+        Import-Module ActiveDirectory
+    
+        # Test if Im on a windows Domain, If so and we find Windows Group SQL Logins, resolve all related Windows AD Users
+        $MyDCs = Get-ADDomainController -Filter * | Select-Object name
+    
+        if ($MyDCs -ne $null)
+        {
+            Write-Output "Domain Controller found - Resolving of AD Group User Memberships Enabled"
+            $ADModuleExists = $true
+        }
+        else
+        {
+            Write-Output "Domain Controller NOT found - Resolving of AD Group User Memberships Disabled - are you in a Workgroup?"
+        }
+    
+        # Reset default PS error handler
+        $ErrorActionPreference = $old_ErrorActionPreference 	
+    
+    }
+    catch
+    {
+        # Reset default PS error handler
+        $ErrorActionPreference = $old_ErrorActionPreference 
+    
+        # PS AD Module not installed
+        Write-Output "AD Module Not Found - AD Group User Resolution not attempted"
+    }
+}
+else
+{
+    Write-Output "NOT on a Domain - Resolving of AD Group User Memberships Disabled"
+}
 
 #  Script Name
 Write-Host  -f Yellow -b Black "01 - Server Logins"
@@ -231,54 +281,6 @@ if(!(test-path -path $SQLAuthUsersPath))
     }
 
 
-
-# Test for Domain Membership and if the Powersherll AD Module is installed
-[bool]$OnDomain = (gwmi win32_computersystem).partofdomain
-
-# If we are part of a Domain, Load the AD Module if it is installed on the user's system
-if ($OnDomain -eq $true)
-{
-    $ADModuleExists = $false
-    try
-    {
-        $old_ErrorActionPreference = $ErrorActionPreference
-        $ErrorActionPreference = 'SilentlyContinue'
-    
-        Import-Module ActiveDirectory
-    
-        # Test if Im on a windows Domain, If so and we find Windows Group SQL Logins, resolve all related Windows AD Users
-        $MyDCs = Get-ADDomainController -Filter * | Select-Object name
-    
-        if ($MyDCs -ne $null)
-        {
-            Write-Output "Domain Controller found - Resolving of AD Group Users Enabled"
-            $ADModuleExists = $true
-        }
-        else
-        {
-            Write-Output "NO Domain Controller found - Resolving of AD Group Users Disabled"
-        }
-    
-        # Reset default PS error handler
-        $ErrorActionPreference = $old_ErrorActionPreference 	
-    
-    }
-    catch
-    {
-        # Reset default PS error handler
-        $ErrorActionPreference = $old_ErrorActionPreference 
-    
-        # PS AD Module not installed
-        Write-Output "AD Module Not Found - Resolving of AD Group Users Disabled"
-    }
-}
-else
-{
-    Write-Output "NOT on a Domain - Resolving of AD Group Users Disabled"
-
-}
-
-
 # Export Logins
 $logins_path  = "$BaseFolder\$SQLInstance\01 - Server Logins\"
 $logins = $srv.Logins
@@ -290,12 +292,13 @@ foreach ($Login in $Logins)
     if ($Login.Name -like "NT SERVICE\*") {continue}
     if ($Login.Name -like "NT AUTHORITY\*") {continue}    
     if ($Login.Name -like "IIS AppPool\*") {continue} 
-    if ($Login.Name -like "##MS_*") {continue}
     if ($Login.Name -eq "BUILTIN\Administrators") {continue}   
-    
-    
+    if ($Login.Name -eq "##MS_PolicyEventProcessingLogin##") {continue}
+    if ($Login.Name -eq "##MS_PolicyTsqlExecutionLogin##") {continue}
+    if ($Login.Name -eq "##MS_SQLEnableSystemAssemblyLoadingUser##") {continue}
+    if ($Login.Name -eq "##MS_SSISServerCleanupJobLogin##") {continue}
 
-    # Type 1
+
     # Windows Domain Groups
     if ($OnDomain -eq $true -and $ADModuleExists -eq $true -and $Login.LoginType -eq "WindowsGroup")
     {
@@ -344,25 +347,16 @@ foreach ($Login in $Logins)
 
             $CreateObjectName | out-file -FilePath $myoutputfile -append -encoding ascii
         }
-
-    else
-    {
-        # AD Module not loaded/installed, I cant resolved the users of this group, but export the object anyway
-        Write-Output ("Domain Group {0} found, but the Powershell AD module is not installed, User resolution disabled" -f $Login.Name)        
-        CopyObjectsToFiles $login $WinGroupSinglePath
-    }
     }
 
-    # Type 2
-    # Windows Users (Domain or Workgroup)
+
+    # Windows Domain Users
     if ($Login.LoginType -eq "WindowsUser")
     {
         Write-Output ("Scripting out: {0}" -f $Login.Name)
         CopyObjectsToFiles $login $WinUsersPath
     }
 
-
-    # Type 4
     # SQL Auth
     if ($Login.LoginType -eq "SQLLogin")
     {

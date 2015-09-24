@@ -12,10 +12,11 @@
     00_RunAllScriptsSecurityOnly.ps1 server01 sa password
 
 .Inputs
-    ServerName, [SQLUser], [SQLPassword]
+    ServerName\instance, [SQLUser], [SQLPassword]
 
 .Outputs
 
+	
 .NOTES
 	George Walkey
 	Richmond, VA USA

@@ -12,24 +12,24 @@
     15_Extended_Events.ps1 server01 sa password
 
 .Inputs
-    ServerName, [SQLUser], [SQLPassword]
+    ServerName\instance, [SQLUser], [SQLPassword]
 
 .Outputs
     .sql files
 	
 .NOTES
-
 	George Walkey
 	Richmond, VA USA
-	
+
 .LINK
 	https://github.com/gwalkey
+	
 #>
 
 Param(
     [parameter(Position=0,mandatory=$false,ValueFromPipeline)]
     [ValidateNotNullOrEmpty()]
-    [string]$SQLInstance,
+    [string]$SQLInstance='localhost',
 
     [parameter(Position=1,mandatory=$false,ValueFromPipeline)]
     [ValidateLength(0,20)]
@@ -49,13 +49,6 @@ Write-Host -f Yellow -b Black "15 - Extended Events"
 # Load SMO Assemblies
 Import-Module ".\LoadSQLSmo.psm1"
 LoadSQLSMO
-
-# assume localhost
-if ($SQLInstance.length -eq 0)
-{
-	Write-Output "Assuming localhost"
-	$Sqlinstance = 'localhost'
-}
 
 
 # Usage Check

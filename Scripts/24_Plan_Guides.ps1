@@ -1,18 +1,15 @@
 ﻿<#
 .SYNOPSIS
-    Gets the .NET Assemblies registered on the target server
+    Gets any saved Plan Guides per Database from the target server
 	
 .DESCRIPTION
-   Writes the .NET Assemblies out to the "03 - NET Assemblies" folder
-   One folder per Database
-   One file for each registered DLL
-   CREATE ASSEMBLY with the binary as a HEX STRING
-   
+  Creates 'EXEC sp_create_plan_guide' Statements from [database].[sys].[plan_guides]
+
 .EXAMPLE
-    03_NET_Assemblies.ps1 localhost
+    24_Plan_Guides.ps1 localhost
 	
 .EXAMPLE
-    03_NET_Assemblies.ps1 server01 sa password
+    24_Plan Guides.ps1 localhost username password
 
 .Inputs
     ServerName\instance, [SQLUser], [SQLPassword]
@@ -26,18 +23,19 @@
 
 .LINK
 	https://github.com/gwalkey
+
 	
 #>
 
 Param(
-  [string]$SQLInstance='localhost',
+  [string]$SQLInstance="localhost",
   [string]$myuser,
   [string]$mypass
 )
 
 [string]$BaseFolder = (Get-Item -Path ".\" -Verbose).FullName
 
-Write-Host  -f Yellow -b Black "03 - .NET Assemblies"
+Write-Host  -f Yellow -b Black "24 - Plan Guides"
 
 # Load SMO Assemblies
 Import-Module ".\LoadSQLSmo.psm1"
@@ -47,7 +45,7 @@ LoadSQLSMO
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
 {
-    Write-Host -f yellow "Usage: ./03_NET_Assemblies.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
+    Write-Host -f yellow "Usage: ./24_Plan_Guides.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
     Set-Location $BaseFolder
     exit
 }
@@ -110,7 +108,7 @@ else
 
 
 # Create output folder
-$output_path = "$BaseFolder\$SQLInstance\03 - NET Assemblies\"
+$output_path = "$BaseFolder\$SQLInstance\24 - Plan Guides\"
 if(!(test-path -path $output_path))
     {
         mkdir $output_path | Out-Null
@@ -130,28 +128,14 @@ foreach($sqlDatabase in $srv.databases)
     $db = $sqlDatabase
     $fixedDBName = $db.name.replace('[','')
     $fixedDBName = $fixedDBName.replace(']','')
-    $output_path = "$BaseFolder\$SQLInstance\03 - NET Assemblies\$fixedDBname"
-    
+    $output_path = "$BaseFolder\$SQLInstance\24 - Plan Guides\$fixedDBname"
                
-    # Get Assemblies
+    # Get Diagrams
     $mySQLquery = 
     "
     USE $fixedDBName
     GO
-    SELECT  
-    a.name as [AName],
-    af.name as [DLL],
-    'CREATE ASSEMBLY [' + a.name + '] FROM 0x' +
-    convert(varchar(max),af.content,2) +
-     ' WITH PERMISSION_SET=' +
-    case 
-	    when a.permission_set=1 then 'SAFE' 
-	    when a.permission_set=2 then 'EXTERNAL_ACCESS' 
-	    when a.permission_set=3 then 'UNSAFE'
-    end as 'Content'
-    FROM sys.assemblies a
-    INNER JOIN sys.assembly_files af ON a.assembly_id = af.assembly_id 
-    WHERE a.name <> 'Microsoft.SqlServer.Types' 
+    select * from  sys.plan_guides
     "
 
     # Run SQL
@@ -166,27 +150,62 @@ foreach($sqlDatabase in $srv.databases)
     }
 
     # Any results?
-    if ($results.count -gt 0)
+    if ($results)
     {
-        Write-Output "Scripting out .NET Assemblies for: "$fixedDBName
+        Write-Output ("Scripting out Plan Guides for: {0}" -f $fixedDBName)
+    }
+    else
+        {continue}
+    
+    # One Output folder per DB
+    if(!(test-path -path $output_path))
+    {
+        mkdir $output_path | Out-Null
     }
 
-    foreach ($assembly in $results)
-    {        
-        # One Sub for each DB
-        if(!(test-path -path $output_path))
-        {
-            mkdir $output_path | Out-Null
-        }
 
-        $myoutputfile = $output_path+"\"+$assembly.AName+'.sql'        
-        $myoutputstring = $assembly.Content
-        $myoutputstring | out-file -FilePath $myoutputfile -encoding ascii -width 50000000
+    foreach ($pg in $results)
+    {        
+        $PName = $pg.name
+
+        $pquery = "`
+        Use "+$sqlDatabase.Name+";"+
+        "
+
+        select 
+	        'exec sp_create_plan_guide '+
+	        '@name=N'+char(39)+'['+[name]+']'+char(39)+', '+
+	        '@stmt=N'+char(39)+[query_text]+char(39)+', '+
+	        '@type=N'+char(39)+[scope_type_desc]+char(39)+', '+
+	        '@module_or_batch=N'+char(39)+isnull([scope_batch],'null')+char(39)+', '+
+	        '@params='+iif([parameters] is null,'null', 'N'+char(39)+[parameters]+char(39))+', '+
+	        '@hints=N'+char(39)+[hints]+char(39) as 'column1'
+        from 
+	        sys.plan_guides
+           where [name] = '$PName'
+        "
+
+        #Write-Output $pquery
+        
+        # Dump Diagrams
+        if ($serverauth -eq "win")
+        {
+            $presults = Invoke-Sqlcmd -MaxCharLength 100000000 -ServerInstance $SQLInstance -Query $pquery 
+        }
+        else
+        {     
+            $presults = Invoke-Sqlcmd -MaxCharLength 100000000 -ServerInstance $SQLInstance -Query $pquery -Username $myuser -Password $mypass
+        }
+        # Write Out
+        $myoutputfile = $output_path+"\"+$PName+".sql"
+        $presults.column1 | out-file -FilePath $myoutputfile -append -encoding ascii -width 10000000
+        
     } 
             
 
 # Process Next Database
 }
+c:
 
 
 # finish

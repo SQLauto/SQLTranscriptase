@@ -14,7 +14,7 @@
     02_Linked_Servers.ps1 server01 sa password
 
 .Inputs
-    ServerName, [SQLUser], [SQLPassword]
+    ServerName\instance, [SQLUser], [SQLPassword]
 
 .Outputs
 
@@ -24,10 +24,12 @@
 
 .LINK
 	https://github.com/gwalkey
+
+
 #>
 
 Param(
-  [string]$SQLInstance,
+  [string]$SQLInstance='localhost',
   [string]$myuser,
   [string]$mypass
 )
@@ -43,12 +45,6 @@ Write-Host  -f Yellow -b Black "02 - Linked Servers"
 Import-Module ".\LoadSQLSmo.psm1"
 LoadSQLSMO
 
-# assume localhost
-if ($SQLInstance.length -eq 0)
-{
-	Write-Output "Assuming localhost"
-	$Sqlinstance = 'localhost'
-}
 
 # Usage Check
 if ($SQLInstance.Length -eq 0) 

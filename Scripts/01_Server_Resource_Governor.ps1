@@ -13,10 +13,11 @@
     01_Server_Resource_Governor.ps1 server01 sa password
 
 .Inputs
-    ServerName, [SQLUser], [SQLPassword]
+    ServerName\instance, [SQLUser], [SQLPassword]
 
 .Outputs
 
+	
 .NOTES
 	George Walkey
 	Richmond, VA USA
@@ -27,7 +28,7 @@
 #>
 
 Param(
-  [string]$SQLInstance,
+  [string]$SQLInstance='localhost',
   [string]$myuser,
   [string]$mypass
 )
@@ -38,12 +39,6 @@ Param(
 #  Script Name
 Write-Host  -f Yellow -b Black "01 - Server Resource Governor"
 
-# assume localhost
-if ($SQLInstance.length -eq 0)
-{
-	Write-Output "Assuming localhost"
-	$Sqlinstance = 'localhost'
-}
 
 # Usage Check
 if ($SQLInstance.Length -eq 0) 

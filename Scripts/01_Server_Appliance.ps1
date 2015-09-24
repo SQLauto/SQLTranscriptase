@@ -13,23 +13,25 @@
     01_Server_Appliance.ps1 server01 sa password
 
 .Inputs
-    ServerName, [SQLUser], [SQLPassword]
+    ServerName\instance, [SQLUser], [SQLPassword]
 
 .Outputs
 
+	
 .NOTES
 	George Walkey
 	Richmond, VA USA
 
 .LINK
 	https://github.com/gwalkey
+
 	
 #>
 
 Param(
     [parameter(Position=0,mandatory=$false,ValueFromPipeline)]
     [ValidateNotNullOrEmpty()]
-    [string]$SQLInstance,
+    [string]$SQLInstance='localhost',
 
     [parameter(Position=1,mandatory=$false,ValueFromPipeline)]
     [ValidateLength(0,20)]
@@ -50,14 +52,6 @@ LoadSQLSMO
 
 #  Script Name
 Write-Host -f Yellow -b Black "01 - Server Appliance"
-
-# assume localhost
-if ($SQLInstance.length -eq 0)
-{
-	Write-Output "Assuming localhost"
-	$Sqlinstance = 'localhost'
-}
-
 
 # Usage Check
 if ($SQLInstance.Length -eq 0) 

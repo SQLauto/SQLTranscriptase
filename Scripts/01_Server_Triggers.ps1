@@ -13,9 +13,10 @@
     01_Server_Triggers.ps1 server01 sa password
 
 .Inputs
-    ServerName, [SQLUser], [SQLPassword]
+    ServerName\instance, [SQLUser], [SQLPassword]
 
 .Outputs
+	
 	
 .NOTES
 	George Walkey
@@ -23,12 +24,13 @@
 
 .LINK
 	https://github.com/gwalkey
+
 	
 #>
 
 
 Param(
-  [string]$SQLInstance,
+  [string]$SQLInstance='localhost',
   [string]$myuser,
   [string]$mypass
 )
@@ -43,13 +45,6 @@ Write-Host  -f Yellow -b Black "01 - Server Triggers"
 # Load SMO Assemblies
 Import-Module ".\LoadSQLSmo.psm1"
 LoadSQLSMO
-
-# assume localhost
-if ($SQLInstance.length -eq 0)
-{
-	Write-Output "Assuming localhost"
-	$Sqlinstance = 'localhost'
-}
 
 
 # Usage Check

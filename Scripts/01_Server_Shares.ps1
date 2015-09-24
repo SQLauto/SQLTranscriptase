@@ -7,29 +7,26 @@
    One file for all shares
    
 .EXAMPLE
-    01_Server_Shares.ps1 localhost
-	
-.EXAMPLE
-    01_Server_Shares.ps1 server01 sa password
+    Usage: 01_Server_Shares.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)
 
 .Inputs
-    ServerName, [SQLUser], [SQLPassword]
+    ServerName\instance, [SQLUser], [SQLPassword]
 
 .Outputs
 	HTML Files
 	
 .NOTES
-	
 	George Walkey
 	Richmond, VA USA
-	
+
 .LINK
 	https://github.com/gwalkey
+
 	
 #>
 
 Param(
-  [string]$SQLInstance,
+  [string]$SQLInstance="localhost",
   [string]$myuser,
   [string]$mypass
 )
@@ -38,13 +35,6 @@ Param(
 [string]$BaseFolder = (Get-Item -Path ".\" -Verbose).FullName
 
 Write-Host  -f Yellow -b Black "01 - Server Shares"
-
-# assume localhost
-if ($SQLInstance.length -eq 0)
-{
-	Write-Output "Assuming localhost"
-	$Sqlinstance = 'localhost'
-}
 
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
@@ -157,8 +147,91 @@ $myCSS | out-file "$fullfolderPath\HTMLReport.css" -Encoding ascii
 
 # Export It
 $mySettings = $ShareArray
-$mySettings | select Name, Path, Description  | ConvertTo-Html  -PreContent "<h1>$SqlInstance</H1><H2>Server Shares</h2>" -CSSUri "HtmlReport.css"| Set-Content "$fullfolderPath\HtmlReport.html"
+$mySettings | select Name, Path, Description  | ConvertTo-Html  -PreContent "<h1>$SqlInstance</H1><H2>Server Shares</h2>" -CSSUri "HtmlReport.css"| Set-Content "$fullfolderPath\Shares_Overview.html"
 
+# Loop Through Each Share, exporting NTFS and SMB permissions
+Write-Output "Dumping NTFS/SMB Share Permissions..."
+
+
+$PermPath = "$BaseFolder\$sqlinstance\01 - Server Shares\NTFS_Permissions\"
+if(!(test-path -path $PermPath))
+{
+    mkdir $PermPath | Out-Null
+}
+$permpathfile = $PermPath + "NTFS_Permissions.txt"
+"NTFS File Permissions for $Winserver" | out-file -FilePath $permpathfile -encoding ascii
+
+$SMBPath = "$BaseFolder\$sqlinstance\01 - Server Shares\SMB_Permissions\"
+if(!(test-path -path $SMBPath))
+{
+    mkdir $SMBPath | Out-Null
+}
+$SMBPathfile = $SMBPath + "SMB_Permissions.txt"
+"SMB Share Permissions for $Winserver" | out-file -FilePath $SMBPathfile -encoding ascii
+
+Function Get-NtfsRights($name,$path,$comp)
+{
+	$path = [regex]::Escape($path)
+	$share = "\\$comp\$name"
+	$wmi = gwmi Win32_LogicalFileSecuritySetting -filter "path='$path'" -ComputerName $comp
+	$wmi.GetSecurityDescriptor().Descriptor.DACL | where {$_.AccessMask -as [Security.AccessControl.FileSystemRights]} |select `
+				@{name="Principal";Expression={"{0}\{1}" -f $_.Trustee.Domain,$_.Trustee.name}},
+				@{name="Rights";Expression={[Security.AccessControl.FileSystemRights] $_.AccessMask }},
+				@{name="AceFlags";Expression={[Security.AccessControl.AceFlags] $_.AceFlags }},
+				@{name="AceType";Expression={[Security.AccessControl.AceType] $_.AceType }},
+				@{name="ShareName";Expression={$share}}
+}
+
+foreach($Share in $ShareArray)
+{
+    # Skip certain shares
+    if ($Share.name -eq "print$") {continue}
+    if ($Share.name -eq "FILESTREAM") {continue}
+    if ($Share.name -eq "IPC$") {continue}
+    if ($Share.name -eq "ADMIN$") {continue}
+    
+    $SharePath = $Share.Path
+    $acl = Get-NtfsRights $Share.Name $Share.Path $WinServer
+ 
+    # File/NTFS Permissions
+    foreach($accessRule in $acl)
+    {
+        Write-Output ("Share: {0}, Path: {1}, Identity: {2}, Rights: {3}" -f $accessRule.ShareName, $Share.path, $accessRule.Principal, $accessRule.Rights)
+        Write-Output ("Share: {0}, Path: {1}, Identity: {2}, Rights: {3}" -f $accessRule.ShareName, $Share.path, $accessRule.Principal, $accessRule.Rights) | out-file -FilePath $permpathfile -append -encoding ascii
+    }
+
+    Write-Output ("`r`n") | out-file -FilePath $permpathfile -append -encoding ascii
+   
+    
+
+    # Share/SMB Perms
+    $ShareName = $Share.Name
+    $SMBShare = Get-WmiObject win32_LogicalShareSecuritySetting -Filter "name='$ShareName'" -ComputerName $WinServer
+    if($SMBShare)
+    {
+        $obj = @()
+        $ACLS = $SMBShare.GetSecurityDescriptor().Descriptor.DACL
+        foreach($ACL in $ACLS)
+        {
+            $User = $ACL.Trustee.Name
+            if(!($user)){$user = $ACL.Trustee.SID}
+            $Domain = $ACL.Trustee.Domain
+            switch($ACL.AccessMask)
+            {
+                2032127 {$Perm = "Full Control"}
+                1245631 {$Perm = "Change"}
+                1179817 {$Perm = "Read"}
+            }
+
+            Write-Output ("Share: {0}, Domain: {1}, User: {2}, Permission: {3}" -f $ShareName, $Domain, $User, $Perm)
+            Write-Output ("Share: {0}, Domain: {1}, User: {2}, Permission: {3}" -f $ShareName, $Domain, $User, $Perm) | out-file -FilePath $SMBPathfile -append -encoding ascii            
+            
+            }
+    
+    }
+    
+}
 
 set-location "$BaseFolder"
+
 

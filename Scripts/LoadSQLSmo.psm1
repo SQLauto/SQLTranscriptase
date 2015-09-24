@@ -15,10 +15,6 @@
 .Outputs
 	
 .NOTES
-
-	George Walkey
-	Richmond, VA USA
-	
     Loading SQL SMO Assemblies - let me count the ways
 
     http://www.madwithpowershell.com/2013/10/add-type-vs-reflectionassembly-in.html
@@ -39,9 +35,12 @@
     5) - Hard Coded GAC path
     #Add-Type -Path “C:\Windows\assembly\GAC_MSIL\Microsoft.SqlServer.Smo\12.0.0.0__89845dcd8080cc91\Microsoft.SqlServer.Smo.dll”
 	
+	George Walkey
+	Richmond, VA USA
+
 .LINK
-		https://github.com/gwalkey
-		
+	https://github.com/gwalkey
+	
 #>
 
 function LoadSQLSMO(){

@@ -12,24 +12,28 @@
     09_SSIS_Packages_from_SSISDB.ps1 server01 sa password
 
 .Inputs
-    ServerName, [SQLUser], [SQLPassword]
+    ServerName\instance, [SQLUser], [SQLPassword]
 
 .Outputs
 
+	
 .NOTES
 	George Walkey
 	Richmond, VA USA
 
 .LINK
 	https://github.com/gwalkey
+
 	
 #>
 
 Param(
-  [string]$SQLInstance,
+  [string]$SQLInstance="localhost",
   [string]$myuser,
   [string]$mypass
 )
+
+Set-StrictMode -Version Latest
 
 
 [string]$BaseFolder = (Get-Item -Path ".\" -Verbose).FullName
@@ -42,13 +46,6 @@ Write-Host  -f Yellow -b Black "09 - SSIS Packages from SSISDB"
 Import-Module ".\LoadSQLSmo.psm1"
 LoadSQLSMO
 
-
-# assume localhost
-if ($SQLInstance.length -eq 0)
-{
-	Write-Output "Assuming localhost"
-	$SQLInstance = 'localhost'
-}
 
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
@@ -63,17 +60,22 @@ if ($SQLInstance.Length -eq 0)
 Write-Output "Server $SQLInstance"
 
 
+# Get Auth mode
+$serverauth = "win"
+if ($mypass.Length -ge 1 -and $myuser.Length -ge 1)  
+{
+    $serverauth = "sql"
+}
+
+
 # See if the SSISDB Catalog Exists first
 $Folders = @()
-if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
+if ($serverauth -eq "sql")
 {
 	Write-Output "Using SQL Auth"
 	
 	# See if the SSISDB Catalog Exists first
 	[bool]$exists = $FALSE
-
-    # we set this to null so that nothing is displayed
-	$null = [reflection.assembly]::LoadWithPartialName("Microsoft.SqlServer.Smo")
 	   
 	# Get reference to database instance
 	$server = new-object ("Microsoft.SqlServer.Management.Smo.Server") $SQLInstance
@@ -90,7 +92,7 @@ if ($mypass.Length -ge 1 -and $myuser.Length -ge 1)
     }
 
     # Look for the 2012+ SSIS Catalog on this server
-    if ( $null -ne $server.Databases["SSISDB"] ) { $exists = $true } else { $exists = $false }
+    if ($server.Databases["SSISDB"] ) { $exists = $true } else { $exists = $false }
 	
 	if ($exists -eq $FALSE)
     {
@@ -123,15 +125,12 @@ else
 	
 	# See if the SSISDB Catalog Exists first		
 	$exists = $FALSE
-
-    # we set this to null so that nothing is displayed
-	$null = [reflection.assembly]::LoadWithPartialName("Microsoft.SqlServer.Smo")
 	   
 	# Get reference to database instance
 	$server = new-object ("Microsoft.SqlServer.Management.Smo.Server") $SQLInstance
 	$backupfolder = $server.Settings.BackupDirectory
 
-	# if a UNC path, use it 
+	# if the Backup Directory is a UNC path, use it 
     $unc = 0
     if ($backupfolder -like "*\\*")
     {
@@ -164,7 +163,7 @@ else
 	inner join [SSISDB].[catalog].[folders] f
 	on j.[folder_id] = f.[folder_id]
 	order by 1,2
-"
+    "
 
 }
 
@@ -175,19 +174,159 @@ if(!(test-path -path $fullfolderPath))
     mkdir $fullfolderPath | Out-Null
 }
 	
-Write-Output "Writing out Folders/Projects/Packages in ISPAC format..."
+# Script out Packages as ISPAC files
+Write-Output "Writing out Packages in .ISPAC format..."
 Foreach ($folder in $Folders)
 {
     $foldername = $folder.folder
 	$prjname = $folder.project
+
+    # Create Output Folder for each SSIS Folder
     $SSISFolderPath = "$BaseFolder\$sqlinstance\09 - SSISDB\$foldername"
     if(!(test-path -path $SSISFolderPath))
     {
         mkdir $SSISFolderPath | Out-Null
     }
 	
-    # Script out with BCP and a format file
+    # Script out ISPAC using BCP and a format file
     bcp "exec [ssisdb].[catalog].[get_project] '$foldername','$prjname'" queryout "$SSISFolderPath\$prjname.ispac" -S $SQLInstance -T -f "$BaseFolder\ssisdb.fmt" | Out-Null
+
+}
+
+
+Write-Output "Writing out Folder Environments..."
+
+# Get Only Folders
+$fquery = "select [name] FROM [SSISDB].[catalog].[Folders]"
+if ($serverauth -eq "win")
+{
+    $fresults = Invoke-Sqlcmd -MaxCharLength 10000000 -ServerInstance $SQLInstance -Query $fquery 
+}
+else
+{     
+    $fresults = Invoke-Sqlcmd -MaxCharLength 10000000 -ServerInstance $SQLInstance -Query $fquery -Username $myuser -Password $mypass
+}
+
+
+foreach ($folder in $fresults)
+{
+
+    $foldername = $folder.name
+    Write-Output ("Env: {0}" -f $foldername)
+
+    # Create Environments Subfolder
+    $SSISEnvFolderPath = "$BaseFolder\$sqlinstance\09 - SSISDB\$foldername\Environments\"
+    if(!(test-path -path $SSISenvFolderPath))
+    {
+        mkdir $SSISEnvFolderPath | Out-Null
+    }
+
+    # Script out Folder Environments    
+    $envresults = @()
+    $envquery = "
+    Use SSISDB;
+
+    select 
+    'exec ssisdb.catalog.create_environment '+
+    '@folder_name = N'+char(39)+f.[name]+char(39)+', '+
+    '@environment_name = N'+char(39)+e.[name]+char(39)+', '+
+    '@environment_description = N'+char(39)+e.[description]+char(39)+'`r`nGO'
+    from
+    	SSISDB.catalog.environments e
+    inner join
+    	SSISDB.catalog.folders f
+    on 
+    	e.folder_id = f.folder_id
+    where
+        f.name = '"+$foldername +"'
+    order by
+    	f.name, e.name
+    "
+    
+
+    # Get Envs
+    if ($serverauth -eq "win")
+    {
+        $envresults = Invoke-Sqlcmd -MaxCharLength 10000000 -ServerInstance $SQLInstance -Query $envquery 
+    }
+    else
+    {     
+        $envresults = Invoke-Sqlcmd -MaxCharLength 10000000 -ServerInstance $SQLInstance -Query $envquery -Username $myuser -Password $mypass
+    }
+    # Write Out
+    foreach ($env in $envresults)
+    {
+        $myoutputfile = $SSISEnvFolderPath+$foldername+".sql"
+        $env.column1 | out-file -FilePath $myoutputfile -append -encoding ascii -width 50000        
+    }
+
+    # Script out Environment Variables
+    # Added Sept 21, 2015    
+    $envVresults = @()
+    $envVquery = 
+    "
+    USE SSISDB;
+
+    select
+    'declare @var '+
+    case
+        when v.type = 'Boolean' then 'bit'
+        when v.type = 'Byte' then 'tinyint'
+        when v.type = 'Datetime' then 'Datetime'
+        when v.type = 'Decimal' then 'decimal(38,18)'
+        when v.type = 'Double' then 'float'
+        when v.type = 'Int16' then 'smallint'
+        when v.type = 'Int32' then 'int'
+        when v.type = 'Int64' then 'bigint'
+        when v.type = 'SByte' then 'smallint'
+        when v.type = 'Single' then 'float'
+        when v.type = 'String' then 'sql_variant'
+        when v.type = 'UInt32' then 'bigint'
+        when v.type = 'IInt4' then 'bigint'
+    end +
+    '= N'+ char(39)+cast(v.value as nvarchar(max))+char(39)+'; '+
+    'exec ssisdb.catalog.create_environment_variable '+
+    '@Folder_name = '+char(39)+f.name+char(39)+', '+
+    '@environment_name = '+char(39)+e.name+char(39)+ ', '+
+    '@variable_name = '+char(39)+ v.name+char(39)+ ', '+
+    '@description = ' +char(39)+v.[Description]+char(39)+ ', '+
+    '@sensitive = '+char(39)+ case when v.sensitive=0 then '0' else '1' end +char(39)+ ', '+
+    '@data_type = N'+char(39)+v.Type+char(39)+ ', '+
+    '@value = @var`r`nGO'
+    from
+    	catalog.environments e
+    inner join
+    	catalog.folders f
+    on 
+    	e.folder_id = f.folder_id
+    inner join
+    	catalog.environment_variables v
+    on
+    	e.environment_id = v.environment_id
+    where
+        f.name = '"+$foldername +"'
+    order by
+    	f.name, e.name, v.name
+    "
+    
+    
+    # Get Vars
+    if ($serverauth -eq "win")
+    {
+        $envVresults = Invoke-Sqlcmd -MaxCharLength 10000000 -ServerInstance $SQLInstance -Query $envVquery
+    }
+    else
+    {     
+        $envVresults = Invoke-Sqlcmd -MaxCharLength 10000000 -ServerInstance $SQLInstance -Query $envVquery -Username $myuser -Password $mypass
+    }
+    # Write Out
+    foreach ($envV in $envVresults)
+    {
+        $myoutputVfile = $SSISEnvFolderPath+$foldername+".sql"
+        $envV.column1 | out-file -FilePath $myoutputVfile -append -encoding ascii -width 50000        
+    }
+
+    
 }
 
 # Export SSISDB Catalog Master Key
@@ -200,19 +339,20 @@ $myquery = "use SSISDB; "
 $myquery += " backup master key to file = '$destfile'"
 $myquery += " encryption by password = 'Brf7d5XtWc5gJiTBU8uW'"
 
-if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
-{
-    set-location $fullfolderPath
-    $keyresult = Invoke-Sqlcmd -MaxCharLength 10000000 -ServerInstance $SQLInstance -Query $myquery -Username $myuser -Password $mypass 
-}
-else
+if ($serverauth -eq "win")
 {
     set-location $fullfolderPath
     $keyresult = Invoke-Sqlcmd -MaxCharLength 10000000 -ServerInstance $SQLInstance -Query $myquery
 }
+else
+{
+    set-location $fullfolderPath
+    $keyresult = Invoke-Sqlcmd -MaxCharLength 10000000 -ServerInstance $SQLInstance -Query $myquery -Username $myuser -Password $mypass 
+}
 
 # Copy Key File down from admin share
 Write-Output "Copying down key file..."
+
 
 if ($unc -eq 1)
 {
@@ -225,7 +365,7 @@ if ($unc -eq 1)
 }
 else
 {
-    if ($sqlinstance -eq "localhost") # change drive letter into unc share if localhost using UNC
+    if ($sqlinstance -eq "localhost") # change drive letter into unc share if localhost and using UNC
     {
         $sourcefolder = $backupfolder
         $src = $sourcefolder+$destfrag
@@ -236,7 +376,7 @@ else
         $src = "\\$sqlinstance\$sourcefolder"+$destfrag
     }
     set-location $BaseFolder
-    copy-item $src "$fullfolderPath"
+    copy-item $src $fullfolderPath -Force
     # Leave no trace on server
     remove-item $src -ErrorAction SilentlyContinue
 }
@@ -253,5 +393,6 @@ Write-Output "Writing out Master Key Restore Command..."
 $myrestorecmd | out-file $fullfolderPath\Master_Key_Restore_cmd.sql -Encoding ascii
 
 Write-Output ("{0} Packages Exported" -f $Folders.count)
+
 
 set-location $BaseFolder

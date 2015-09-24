@@ -13,7 +13,7 @@
     01_Server_Roles.ps1 server01 sa password
 
 .Inputs
-    ServerName, [SQLUser], [SQLPassword]
+    ServerName\instance, [SQLUser], [SQLPassword]
 
 .Outputs
 	HTML Files
@@ -25,10 +25,12 @@
 .LINK
 	https://github.com/gwalkey
 	
+
+	
 #>
 
 Param(
-  [string]$SQLInstance,
+  [string]$SQLInstance='localhost',
   [string]$myuser,
   [string]$mypass
 )
@@ -46,13 +48,6 @@ Write-Host  -f Yellow -b Black "01 - Server Roles"
 Import-Module ".\LoadSQLSmo.psm1"
 LoadSQLSMO
 
-
-# assume localhost
-if ($SQLInstance.length -eq 0)
-{
-	Write-Output "Assuming localhost"
-	$Sqlinstance = 'localhost'
-}
 
 # Usage Check
 if ($SQLInstance.Length -eq 0) 

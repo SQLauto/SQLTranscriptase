@@ -27,27 +27,31 @@
     20_DataBase_Objects.ps1 server01 sa password
 
 .EXAMPLE
-    20_Database_Objects.ps1 localhost -myDatabase AdventureWorks2014
+    20_Database_Objects.ps1 -SQLInstance localhost -myuser username -mypass password -myDatabase AdventureWorks2014 -mytable Person.Address
 
 .Inputs
-    ServerName, [SQLUser], [SQLPassword], [myDatabase]
+    ServerName\instance, [SQLUser], [SQLPassword], [myDatabase]
 
 .Outputs
 
 .NOTES
 	George Walkey
 	Richmond, VA USA
-	
+
 .LINK
 	https://github.com/gwalkey
+	
+
 	
 #>
 
 Param(
     [string]$SQLInstance = "localhost",
-    [string]$myuser,    
-    [string]$mypass,    
-    [string]$myDatabase
+    [string]$myuser,
+    [string]$mypass,
+    [string]$myDatabase,
+	[string]$mytable
+
 )
 
 
@@ -58,8 +62,6 @@ Write-Host  -f Yellow -b Black "20 - DataBase Objects (Triggers, Tables, Views, 
 # Load SMO Assemblies
 Import-Module ".\LoadSQLSmo.psm1"
 LoadSQLSMO
-
-# Load Additional Libraries
 
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
@@ -133,11 +135,9 @@ function CopyObjectsToFiles($objects, $outDir) {
 			$fixedOName = $o.name.replace('\','_')			
 			$scripter.Options.FileName = $outDir + $schemaPrefix + $fixedOName + ".sql"
             try
-            {
-                #Write-Output "Break here Jester"
+            {                
                 $urn = new-object Microsoft.SQlserver.Management.sdk.sfc.urn($o.Urn);
                 $scripter.Script($urn)
-			    #$scripter.EnumScript($o)
             }
             catch
             {
@@ -176,10 +176,6 @@ else
 # Find/Inspect other Server-Level Objects here
 Write-Output "Looking for Objects..."
 
-
-# Set scripter options to ensure only schema is scripted
-$scripter.Options.ScriptSchema 	= $true;
-$scripter.Options.ScriptData 	= $false;
 
 # Add your favorite options from 
 # https://msdn.microsoft.com/en-us/library/microsoft.sqlserver.management.smo.scriptingoptions.aspx
@@ -235,8 +231,14 @@ $scripter.Options.ToFileOnly 			= $true
 $scripter.Options.WithDependencies		= $false # Leave OFF - creates issues
 $scripter.Options.XmlIndexes            = $true
 
-# If you want to live Dangerously - YES, you can export your data one INSERT statement at a time....It will be BIG
-$scripter.Options.ScriptData            = $false
+# Set scripter options to ensure only schema is scripted
+$scripter.Options.ScriptSchema 	= $true;
+$scripter.Options.ScriptData 	= $false;
+
+if ($myDatabase.Length -gt 0)
+{
+    Write-Output ("Only for Database {0}"-f $myDatabase)
+}
 
 # -----------------------
 # iterate over each DB
@@ -372,12 +374,26 @@ foreach($sqlDatabase in $srv.databases)
     $mySettings = $db.Properties
     $mySettings | sort-object Name | select Name, Value | ConvertTo-Html  -CSSUri "$DBSettingsPath\HTMLReport.css"| Set-Content "$DBSettingsPath\HtmlReport.html"
     
+    # -------------------------
+    # Start Individual Objects
+    # -------------------------
     
     # Tables
     Write-Output "$fixedDBName - Tables"
-    $tbl = $db.Tables  | Where-object  { -not $_.IsSystemObject  }
-    CopyObjectsToFiles $tbl $table_path
 
+    if ($mytable.Length -gt 0)
+	{
+        Write-Output ("Only for table {0}"-f $mytable)
+        $tblSchema = ($mytable -split {$_ -eq "."})[0]
+        $tblTable = ($mytable -split {$_ -eq "."})[1]
+        $tbl = $db.Tables | Where-Object {$_.schema -eq $tblSchema -and $_.name -eq $tblTable}
+	}
+	else
+	# Get all Tables
+	{
+		$tbl = $db.Tables  | Where-object  { -not $_.IsSystemObject  }
+	}
+    CopyObjectsToFiles $tbl $table_path
 
     # Stored Procs
     Write-Output "$fixedDBName - Stored Procs"
@@ -438,38 +454,6 @@ foreach($sqlDatabase in $srv.databases)
     $Synonyms = $db.Synonyms
     CopyObjectsToFiles $Synonyms $Synonyms_path
 
-
-    # Release Memory - Test Set to $null vs Remove-Variable
-    
-    $tbl = $null
-    $storedProcs = $null
-    $views = $null
-    $udfs = $null
-    $udtts = $null
-    $catalog = $null
-    $DBTriggers = $null
-    $TableTriggers = $null
-    $Schemas = $null
-    $Sequences = $null
-    $Synonyms = $null
-    
-
-
-    <#    
-    Remove-Variable $tbl
-    Remove-Variable $storedProcs
-    Remove-Variable $views
-    Remove-Variable $udfs
-    Remove-Variable $udtts
-    Remove-Variable $catalog
-    Remove-Variable $DBTriggers
-    Remove-Variable $TableTriggers
-    Remove-Variable $Schemas
-    Remove-Variable $Sequences
-    Remove-Variable $Synonyms 
-    #>
-    
-
     # List Filegroups, Files and Path
     Write-Output "$fixedDBName - FileGroups"
 
@@ -516,10 +500,39 @@ foreach($sqlDatabase in $srv.databases)
     }
 
 
+
     # Force GC
-    # March 10, 2015 - Still need to call this to kick off a GC pass?
+    # March 10, 2015 - can we manually kick off a GC pass?
     # Testing with Perfmon
     # Seems only ending the script/session releases memory
+    # Release Memory - Test Setting a variable to $null vs Remove-Variable
+    
+    $tbl = $null
+    $storedProcs = $null
+    $views = $null
+    $udfs = $null
+    $udtts = $null
+    $catalog = $null
+    $DBTriggers = $null
+    $TableTriggers = $null
+    $Schemas = $null
+    $Sequences = $null
+    $Synonyms = $null
+
+    <#    
+    Remove-Variable $tbl
+    Remove-Variable $storedProcs
+    Remove-Variable $views
+    Remove-Variable $udfs
+    Remove-Variable $udtts
+    Remove-Variable $catalog
+    Remove-Variable $DBTriggers
+    Remove-Variable $TableTriggers
+    Remove-Variable $Schemas
+    Remove-Variable $Sequences
+    Remove-Variable $Synonyms 
+    #>
+    
     [System.GC]::Collect()
 
     <#

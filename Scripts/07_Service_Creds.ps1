@@ -24,11 +24,12 @@
 
 .LINK
 	https://github.com/gwalkey
+
 	
 #>
 
 Param(
-  [string]$SQLInstance
+  [string]$SQLInstance='localhost'
 )
 
 
@@ -40,12 +41,6 @@ Write-Host  -f Yellow -b Black "07 - Service Credentials"
 Import-Module ".\LoadSQLSmo.psm1"
 LoadSQLSMO
 
-# assume localhost
-if ($SQLInstance.length -eq 0)
-{
-	Write-Output "Assuming localhost"
-	$SQLInstance = 'localhost'
-}
 
 # Usage Check
 if ($SQLInstance.Length -eq 0) 

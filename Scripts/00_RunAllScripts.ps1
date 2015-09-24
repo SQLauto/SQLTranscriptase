@@ -12,7 +12,7 @@
     00_RunAllScripts.ps1 server01 sa password
 
 .Inputs
-    ServerName, [SQLUser], [SQLPassword]
+    ServerName\instance, [SQLUser], [SQLPassword]
 
 .Outputs
 
@@ -23,6 +23,7 @@
 
 .LINK
 	https://github.com/gwalkey
+	
 	
 #>
 
@@ -138,6 +139,13 @@ set-location $BaseFolder
 & .\15_Extended_Events.ps1 $SQLInstance $myuser $mypass
 & .\16_Audits.ps1 $SQLInstance $myuser $mypass
 & .\17_Managed_Backups.ps1 $SQLInstance $myuser $mypass
+# & .\18_Replication.ps1 $SQLInstance $myuser $mypass
+# & .\19_AlwaysOn.ps1 $SQLInstance $myuser $mypass
+& .\21_Dac_Packages.ps1 $SQLInstance $myuser $mypass
+# & .\22_Policy_Based_Mgmt.ps1 $SQLInstance $myuser $mypass
+& .\23_Database_Diagrams.ps1 $SQLInstance $myuser $mypass
+& .\24_Plan_Guides.ps1 $SQLInstance $myuser $mypass
+
 #& .\01_Server_Startup_Procs.ps1 $SQLInstance $myuser $mypass
 #& .\20_DataBase_Objects.ps1 $SQLInstance $myuser $mypass
 

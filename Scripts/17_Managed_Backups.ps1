@@ -14,21 +14,27 @@
 .EXAMPLE
     17_Managed_Backups.ps1 server01 sa password
 
-.NOTES
-	George Walkey
-	Richmond, VA USA
-.LINK
-	https://github.com/gwalkey
-
 .Inputs
-    ServerName, [SQLUser], [SQLPassword]
+    ServerName\instance, [SQLUser], [SQLPassword]
 
 .Outputs
 
+
+	
+.NOTES
+	https://msdn.microsoft.com/en-us/library/dn449497(v=sql.120).aspx
+	
+	George Walkey
+	Richmond, VA USA
+
+.LINK
+	https://github.com/gwalkey
+		
+    
 #>
 
 Param(
-  [string]$SQLInstance,
+  [string]$SQLInstance='localhost',
   [string]$myuser,
   [string]$mypass
 )
@@ -42,13 +48,6 @@ Write-Host  -f Yellow -b Black "17 - Managed Backups"
 Import-Module ".\LoadSQLSmo.psm1"
 LoadSQLSMO
 
-
-# assume localhost
-if ($SQLInstance.length -eq 0)
-{
-	Write-Output "Assuming localhost"
-	$SQLInstance = 'localhost'
-}
 
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
