@@ -22,7 +22,7 @@
     https://msdn.microsoft.com/en-us/library/microsoft.sqlserver.management.facets.aspx
 	
 .LINK
-
+	https://github.com/gwalkey/SQLTranscriptase
 	
 #>
 

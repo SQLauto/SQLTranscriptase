@@ -29,14 +29,10 @@
 .NOTES
 
     https://msdn.microsoft.com/en-us/library/microsoft.analysisservices(v=sql.120).aspx
-	
 
-
-	George Walkey
-	Richmond, VA USA
 
 .LINK
-	https://github.com/gwalkey
+	https://github.com/gwalkey/SQLTranscriptase
 
 #>
 

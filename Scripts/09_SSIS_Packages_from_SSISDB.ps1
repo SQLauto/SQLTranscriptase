@@ -18,11 +18,9 @@
 
 	
 .NOTES
-	George Walkey
-	Richmond, VA USA
 
 .LINK
-	https://github.com/gwalkey
+	https://github.com/gwalkey/SQLTranscriptase
 
 	
 #>
