@@ -181,7 +181,11 @@ foreach($policy in $MyP)
     $myfixedName = $myfixedName.replace('/','_')
     $myfixedName = $myfixedName.replace('%','_')
     $Outfilename = $POutput_path+"$myfixedName.xml"
+<<<<<<< HEAD
     "Policy: $myfixedName"
+=======
+    "Policy: $myfixedName.xml"
+>>>>>>> origin/master
     $xmlWriter = [System.Xml.XmlWriter]::Create($Outfilename)
     $policy.Serialize($xmlWriter)
     $xmlWriter.Close()
@@ -200,11 +204,19 @@ foreach($Condition in $myC)
     $myfixedName = $myfixedName.replace('/','_')
     $myfixedName = $myfixedName.replace('%','_')
     $Outfilename = $COutput_path+"$myfixedName.xml"
+<<<<<<< HEAD
     "Condition: $myfixedName"
+=======
+    "Condition: $myfixedName.xml"
+>>>>>>> origin/master
     $xmlWriter = [System.Xml.XmlWriter]::Create($Outfilename)
     $Condition.Serialize($xmlWriter)
     $xmlWriter.Close()
 }
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> origin/master
 # Return Home
 set-location $BaseFolder
