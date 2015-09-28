@@ -23,7 +23,7 @@
 
 	
 .LINK
-	https://github.com/gwalkey/SQLTranscriptase
+
 	
 #>
 
@@ -151,8 +151,9 @@ td
 $myCSS | out-file "$fullfolderPath\HTMLReport.css" -Encoding ascii
 
 # Export It
+$RunTime = Get-date
 $mySettings = $VolumeArray
-$mySettings | select Name, Label, FileSystem, DriveType, $VolumeTotalGB, $VolumeUsedGB, $VolumeFreeGB, BootVolume, DriveLetter, BlockSize  | ConvertTo-Html  -PreContent "<h1>$SqlInstance</H1><H2>Server Storage Volumes</h2>" -CSSUri "HtmlReport.css"| Set-Content "$fullfolderPath\HtmlReport.html"
+$mySettings | select Name, Label, FileSystem, DriveType, $VolumeTotalGB, $VolumeUsedGB, $VolumeFreeGB, BootVolume, DriveLetter, BlockSize  | ConvertTo-Html -PostContent "<h3>Ran on : $RunTime</h3>"  -PreContent "<h1>$SqlInstance</H1><H2>Server Storage Volumes</h2>" -CSSUri "HtmlReport.css"| Set-Content "$fullfolderPath\HtmlReport.html"
 
 
 set-location $BaseFolder

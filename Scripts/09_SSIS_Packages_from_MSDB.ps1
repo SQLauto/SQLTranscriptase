@@ -18,10 +18,10 @@
 
 	
 .NOTES
-
+	Might have to run this Elevated (As Administrator) on Windows 8+
 	
 .LINK
-	https://github.com/gwalkey/SQLTranscriptase
+
 
 #>
 

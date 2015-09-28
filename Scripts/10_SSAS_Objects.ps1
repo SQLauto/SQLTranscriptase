@@ -29,10 +29,14 @@
 .NOTES
 
     https://msdn.microsoft.com/en-us/library/microsoft.analysisservices(v=sql.120).aspx
+	
 
+
+	George Walkey
+	Richmond, VA USA
 
 .LINK
-	https://github.com/gwalkey/SQLTranscriptase
+	https://github.com/gwalkey
 
 #>
 
@@ -150,7 +154,8 @@ try
     $myCSS | out-file "$fullfolderPath\HTMLReport.css" -Encoding ascii
 
     # Export it
-    $Props | sort-object Name | select Name, Value, CurrentValue, DefaultValue, RequiresRestart, Type, Units, Category | ConvertTo-Html -PreContent "<h1>$SqlInstance</H1><H2>SSAS Engine Settings</h2>" -CSSUri "HtmlReport.css"| Set-Content "$fullfolderPath\SSAS_Engine_Settings.html"
+    $RunTime = Get-date
+    $Props | sort-object Name | select Name, Value, CurrentValue, DefaultValue, RequiresRestart, Type, Units, Category | ConvertTo-Html -PostContent "<h3>Ran on : $RunTime</h3>" -PreContent "<h1>$SqlInstance</H1><H2>SSAS Engine Settings</h2>" -CSSUri "HtmlReport.css"| Set-Content "$fullfolderPath\SSAS_Engine_Settings.html"
     Write-Output (" Server Engine Config Settings: {0}" -f $Props.count)
 
     # Write Out

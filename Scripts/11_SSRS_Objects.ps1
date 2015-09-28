@@ -27,7 +27,7 @@
 
 	
 .LINK
-	https://github.com/gwalkey/SQLTranscriptase
+
 	
 #>
 
@@ -608,6 +608,7 @@ if(!(test-path -path "$fullfolderPathSUB\HTMLReport.css"))
 
 
 Write-Output "Timed Subscriptions..."
+$RunTime = Get-date
 
 #Foreach ($Sked in $Skeds)
 #{
@@ -619,7 +620,7 @@ Write-Output "Timed Subscriptions..."
     Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, `
     Week_of_Month, Sun, Mon, Tue, Wed, Thu, Fri, Sat, RunHour,  `
     00Z, 01Z, 02Z, 03Z, 04Z, 05Z, 06Z, 07Z, 08Z, 09Z, 10Z, 11Z, 12Z, 13Z, 14Z, 15Z, 16Z, 17Z, 18Z, 19Z, 20Z, 21Z, 22Z, 23Z `
-    | ConvertTo-Html  -CSSUri "HtmlReport.css"| Set-Content $HTMLFileName
+    | ConvertTo-Html -PostContent "<h3>Ran on : $RunTime</h3>" -CSSUri "HtmlReport.css"| Set-Content $HTMLFileName
 #}
 
 
@@ -676,7 +677,7 @@ $ErrorActionPreference = $old_ErrorActionPreference
 $myCSS | out-file "$fullfolderPathSecurity\HTMLReport.css" -Encoding ascii
 
 
-$sqlPermissions | select Path, Name, UserName, RoleName  | ConvertTo-Html  -CSSUri "HtmlReport.css"| Set-Content "$fullfolderPathSecurity\HtmlReport.html"
+$sqlPermissions | select Path, Name, UserName, RoleName  | ConvertTo-Html -PostContent "<h3>Ran on : $RunTime</h3>" -CSSUri "HtmlReport.css"| Set-Content "$fullfolderPathSecurity\HtmlReport.html"
 
 
 # Return to Base

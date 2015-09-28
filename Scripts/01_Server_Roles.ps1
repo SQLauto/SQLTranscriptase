@@ -22,7 +22,7 @@
 
 	
 .LINK
-	https://github.com/gwalkey/SQLTranscriptase
+
 	
 #>
 
@@ -197,6 +197,7 @@ else
 }
 
 # Write out rows
-$results | select security_type, security_entity, principal_type, principal_name, state_desc | ConvertTo-Html  -PreContent "<h1>$SqlInstance</H1><H2>Server Roles</h2>" -CSSUri "HtmlReport.css"| Set-Content "$fullfolderPath\HtmlReport.html"
+$RunTime = Get-date
+$results | select security_type, security_entity, principal_type, principal_name, state_desc | ConvertTo-Html  -PostContent "<h3>Ran on : $RunTime</h3>" -PreContent "<h1>$SqlInstance</H1><H2>Server Roles</h2>" -CSSUri "HtmlReport.css"| Set-Content "$fullfolderPath\HtmlReport.html"
 
 set-location $BaseFolder

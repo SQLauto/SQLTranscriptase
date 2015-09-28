@@ -21,7 +21,7 @@
 
 	
 .LINK
-	https://github.com/gwalkey/SQLTranscriptase
+
 	
 #>
 
@@ -185,9 +185,8 @@ foreach($sqlDatabase in $srv.databases)
            where [name] = '$PName'
         "
 
-        #Write-Output $pquery
-        
-        # Dump Diagrams
+                
+        # Dump Plan Guides
         if ($serverauth -eq "win")
         {
             $presults = Invoke-Sqlcmd -MaxCharLength 100000000 -ServerInstance $SQLInstance -Query $pquery 

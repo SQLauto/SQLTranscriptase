@@ -31,7 +31,7 @@
 	Richmond, VA USA
 
 .LINK
-	https://github.com/gwalkey/SQLTranscriptase
+	https://github.com/gwalkey
 	
 	
 #>

@@ -22,7 +22,7 @@
 
 	
 .LINK
-	https://github.com/gwalkey/SQLTranscriptase
+
 	
 #>
 
@@ -141,6 +141,27 @@ New-Item $fullFileName -type file -force  |Out-Null
 Add-Content -Value "Server Hardware and Software Capabilities for $SQLInstance `r`n" -Path $fullFileName -Encoding Ascii
 
 # SQL
+$mySQLQuery1 = 
+"SELECT @@SERVERNAME AS [Server Name], create_date AS 'column1' 
+FROM sys.server_principals WITH (NOLOCK)
+WHERE name = N'NT AUTHORITY\SYSTEM'
+OR name = N'NT AUTHORITY\NETWORK SERVICE' OPTION (RECOMPILE);
+"
+
+# connect correctly
+if ($serverauth -eq "win")
+{
+    $sqlresults = Invoke-SqlCmd -ServerInstance $SQLInstance -Query $mySQLquery1 -QueryTimeout 10 -erroraction SilentlyContinue
+}
+else
+{
+    $sqlresults = Invoke-SqlCmd -ServerInstance $SQLInstance -Query $mySQLquery1 -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
+}
+
+$myCreateDate = $sqlresults.column1
+$mystring =  "Server Create Date: " +$MyCreateDate
+$mystring| out-file $fullFileName -Encoding ascii -Append
+
 $mystring =  "Server Name: " +$srv.Name 
 $mystring| out-file $fullFileName -Encoding ascii -Append
 
@@ -281,6 +302,9 @@ $mystring =  "`r`nSQL Build reference: http://sqlserverupdates.com/ "
 $mystring| out-file $fullFileName -Encoding ascii -Append
 
 
+$mystring = "`r`nMore Detailed Diagnostic Queries here:`r`nhttp://www.sqlskills.com/blogs/glenn/sql-server-diagnostic-information-queries-for-september-2015"
+$mystring| out-file $fullFileName -Encoding ascii -Append
+
 # Dump out loaded DLLs
 $mySQLquery = "select * from sys.dm_os_loaded_modules order by name"
 
@@ -332,8 +356,9 @@ if(!(test-path -path "$fullfolderPath\HTMLReport.css"))
     $myCSS | out-file "$fullfolderPath\HTMLReport.css" -Encoding ascii    
 }
 
+$RunTime = Get-date
 $sqlresults | select file_version, product_version, debug, patched, prerelease, private_build, special_build, language, company, description, name `
-| ConvertTo-Html  -PreContent "<h1>$SqlInstance</H1><H2>Loaded DLLs</h2>" -CSSUri "HtmlReport.css" | Set-Content "$fullfolderPath\02_Loaded_Dlls.html"
+| ConvertTo-Html    -PostContent "<h3>Ran on : $RunTime</h3>" -PreContent "<h1>$SqlInstance</H1><H2>Loaded DLLs</h2>" -CSSUri "HtmlReport.css" | Set-Content "$fullfolderPath\02_Loaded_Dlls.html"
 
 
 # Dump Trace Flags
@@ -355,7 +380,7 @@ if ($sqlresults2 -eq  $null)
 }
 else
 {
-    $sqlresults2 | select TraceFlag, Status, Global, Session | ConvertTo-Html -PreContent "<h1>$SqlInstance</H1><H2>Trace Flags</h2>"  -CSSUri "HtmlReport.css" | Set-Content "$fullfolderPath\03_Trace_Flags.html"
+    $sqlresults2 | select TraceFlag, Status, Global, Session | ConvertTo-Html   -PostContent "<h3>Ran on : $RunTime</h3>" -PreContent "<h1>$SqlInstance</H1><H2>Trace Flags</h2>"  -CSSUri "HtmlReport.css" | Set-Content "$fullfolderPath\03_Trace_Flags.html"
 }
 
 

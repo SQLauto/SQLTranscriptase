@@ -26,7 +26,6 @@
 .LINK
     https://msdn.microsoft.com/en-us/library/dn449497(v=sql.120).aspx
     
-	https://github.com/gwalkey/SQLTranscriptase
 #>
 
 Param(

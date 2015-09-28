@@ -21,7 +21,6 @@
 .NOTES
 
 .LINK
-	https://github.com/gwalkey/SQLTranscriptase
 	
 #>
 
@@ -215,8 +214,9 @@ else
 }
 
 # Write out rows
+$RunTime = Get-date
 $results | select Login, DefaultDB, language, IsDenied, IsWinAuthentication, IsWinGroup, CreateDate, UpdateDate, ServerRoles, IsSysAdmin|`
-ConvertTo-Html  -PreContent "<h1>$SqlInstance</H1><H2>Server Logins</h2>" -CSSUri "HtmlReport.css"| Set-Content "$fullfolderPath\1_Server_Logins.html"
+ConvertTo-Html -PostContent "<h3>Ran on : $RunTime</h3>"  -PreContent "<h1>$SqlInstance</H1><H2>Server Logins</h2>" -CSSUri "HtmlReport.css"| Set-Content "$fullfolderPath\1_Server_Logins.html"
 
 
 set-location $BaseFolder
@@ -239,6 +239,13 @@ foreach($sqlDatabase in $srv.databases)
     if(!(test-path -path $output_path))
     {
         mkdir $output_path | Out-Null	
+    }
+
+    # Skip Offline Databases (SMO still enumerates them, but cant retrieve the objects)
+    if ($sqlDatabase.Status -ne 'Normal')     
+    {
+        Write-Output ("Skipping Offline: {0}" -f $sqlDatabase.Name)
+        continue
     }
 
     $sqlDatabase.Name
@@ -276,7 +283,7 @@ foreach($sqlDatabase in $srv.databases)
 
     # Write out rows
     $myCSS | out-file "$output_path\HTMLReport.css" -Encoding ascii
-    $results2 | select Login, User | ConvertTo-Html -PreContent "<h1>$SqlInstance</H1><H2>Login-to-User Mappings</h2>" -CSSUri "HtmlReport.css"| Set-Content "$output_path\2_Login_to_User_Mapping.html"
+    $results2 | select Login, User | ConvertTo-Html -PostContent "<h3>Ran on : $RunTime</h3>" -PreContent "<h1>$SqlInstance</H1><H2>Login-to-User Mappings</h2>" -CSSUri "HtmlReport.css"| Set-Content "$output_path\2_Login_to_User_Mapping.html"
 
     set-location $BaseFolder
 
@@ -312,7 +319,7 @@ foreach($sqlDatabase in $srv.databases)
     }
 
     # Write out rows    
-    $results3 | select User_Name,Role_Name | ConvertTo-Html -PreContent "<h1>$SqlInstance</H1><H2>Roles Per User</h2>" -CSSUri "HtmlReport.css"| Set-Content "$output_path\3_Roles_Per_User.html"
+    $results3 | select User_Name,Role_Name | ConvertTo-Html -PostContent "<h3>Ran on : $RunTime</h3>" -PreContent "<h1>$SqlInstance</H1><H2>Roles Per User</h2>" -CSSUri "HtmlReport.css"| Set-Content "$output_path\3_Roles_Per_User.html"
 
     set-location $BaseFolder
 
@@ -348,7 +355,7 @@ foreach($sqlDatabase in $srv.databases)
     }
 
     # Write out rows    
-    $results4 | select User, Operation, permission_name, IsGrantOption | ConvertTo-Html -PreContent "<h1>$SqlInstance</H1><H2>DataBase-Level Permissions</h2>" -CSSUri "HtmlReport.css"| Set-Content "$output_path\4_DBLevel_Permissions.html"
+    $results4 | select User, Operation, permission_name, IsGrantOption | ConvertTo-Html -PostContent "<h3>Ran on : $RunTime</h3>" -PreContent "<h1>$SqlInstance</H1><H2>DataBase-Level Permissions</h2>" -CSSUri "HtmlReport.css"| Set-Content "$output_path\4_DBLevel_Permissions.html"
 
     set-location $BaseFolder
 
@@ -397,7 +404,7 @@ foreach($sqlDatabase in $srv.databases)
 
     # Write out rows    
     $results5 | select User, PermType, permission_name, SchemaName, ObjectName, ObjectType, ColumnName, IsGrantOption | `
-    ConvertTo-Html -PreContent "<h1>$SqlInstance</H1><H2>Object-Level Permissions</h2>" -CSSUri "HtmlReport.css"| Set-Content "$output_path\5_Object_Permissions.html"
+    ConvertTo-Html -PostContent "<h3>Ran on : $RunTime</h3>" -PreContent "<h1>$SqlInstance</H1><H2>Object-Level Permissions</h2>" -CSSUri "HtmlReport.css"| Set-Content "$output_path\5_Object_Permissions.html"
 
     set-location $BaseFolder
         

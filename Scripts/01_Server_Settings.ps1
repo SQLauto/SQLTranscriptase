@@ -24,7 +24,7 @@
 
 	
 .LINK
-	https://github.com/gwalkey/SQLTranscriptase
+
 	
 #>
 
@@ -155,8 +155,9 @@ td
 $myCSS | out-file "$output_path\HTMLReport.css" -Encoding ascii
 
 # Export it
+$RunTime = Get-date
 $mySettings = $srv.Configuration.Properties
-$mySettings | sort-object DisplayName | select Displayname, ConfigValue, runValue | ConvertTo-Html -PreContent "<h1>$SqlInstance</H1><H2>Server Settings</h2>" -CSSUri "HtmlReport.css"| Set-Content "$output_path\HtmlReport.html"
+$mySettings | sort-object DisplayName | select Displayname, ConfigValue, runValue | ConvertTo-Html  -PostContent "<h3>Ran on : $RunTime</h3>" -PreContent "<h1>$SqlInstance</H1><H2>Server Settings</h2>" -CSSUri "HtmlReport.css"| Set-Content "$output_path\HtmlReport.html"
 
 # ----------------------------
 # Get Buffer Pool Extensions

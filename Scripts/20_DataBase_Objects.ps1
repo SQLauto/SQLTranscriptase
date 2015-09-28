@@ -37,12 +37,12 @@
 .NOTES
 
 .LINK
-	https://github.com/gwalkey/SQLTranscriptase
+
 	
 #>
 
 Param(
-    [string]$SQLInstance = "localhost",
+    [string]$SQLInstance = "reportsdb",
     [string]$myuser,
     [string]$mypass,
     [string]$myDatabase,
@@ -172,6 +172,73 @@ else
 # Find/Inspect other Server-Level Objects here
 Write-Output "Looking for Objects..."
 
+# Create some CSS for help in HTML formatting
+$myCSS = 
+"
+table
+    {
+        Margin: 0px 0px 0px 4px;
+        Border: 1px solid rgb(190, 190, 190);
+        Font-Family: Tahoma;
+        Font-Size: 9pt;
+        Background-Color: rgb(252, 252, 252);
+    }
+tr:hover td
+    {
+        Background-Color: rgb(150, 150, 220);
+        Color: rgb(255, 255, 255);
+    }
+tr:nth-child(even)
+    {
+        Background-Color: rgb(242, 242, 242);
+    }
+th
+    {
+        Text-Align: Left;
+        Color: rgb(150, 150, 220);
+        Padding: 1px 4px 1px 4px;
+    }
+td
+    {
+        Vertical-Align: Top;
+        Padding: 1px 4px 1px 4px;
+    }
+"
+
+# Create Database Summary Listing
+$mySQLquery = 
+"
+SELECT 
+    DB_NAME([database_id]) AS [Database_Name],
+    [file_id],
+    name as 'Name',
+    physical_name as 'FileName',
+    type_desc as 'Type',
+    state_desc as 'State',
+	is_percent_growth,
+	CONVERT(bigint, growth/128.0) AS [Growth_in_MB],
+    CONVERT(bigint, size/128.0) AS [Total_Size_in_MB]
+FROM sys.master_files WITH (NOLOCK)
+ORDER BY DB_NAME([database_id]) OPTION (RECOMPILE);
+"
+#Run SQL
+if ($serverauth -eq "win")
+{
+    $sqlresultsX = Invoke-SqlCmd -ServerInstance $SQLInstance -Query $mySQLquery -QueryTimeout 10 -erroraction SilentlyContinue
+}
+else
+{
+    $sqlresultsX = Invoke-SqlCmd -ServerInstance $SQLInstance -Query $mySQLquery -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
+}
+
+$RunTime = Get-date
+$FullFolderPath = "$BaseFolder\$SQLInstance\20 - DataBase Objects\"
+if(!(test-path -path $FullFolderPath))
+{
+    mkdir $FullFolderPath | Out-Null
+}
+$myCSS | out-file "$FullFolderPath\HTMLReport.css" -Encoding ascii
+$sqlresultsX | select Database_Name,file_id, Name, FileName, Type, State, is_percent_growth,growth_in_mb, Total_size_in_MB | ConvertTo-Html -PreContent "<h1>$SqlInstance</H1><H2>Database Summary</h2>" -PostContent "<h3>Ran on : $RunTime</h3>" -CSSUri "HtmlReport.css"| Set-Content "$FullFolderPath\Database_Summary.html"
 
 # Add your favorite options from 
 # https://msdn.microsoft.com/en-us/library/microsoft.sqlserver.management.smo.scriptingoptions.aspx
@@ -251,7 +318,11 @@ foreach($sqlDatabase in $srv.databases)
     if ($sqlDatabase.Name -in 'Master','Model','MSDB','TempDB','SSISDB') {continue}
 
     # Skip Offline Databases (SMO still enumerates them, but cant retrieve the objects)
-    if ($sqlDatabase.Status -ne 'Normal') {continue}
+    if ($sqlDatabase.Status -ne 'Normal')     
+    {
+        Write-Output ("Skipping Offline: {0}" -f $sqlDatabase.Name)
+        continue
+    }
 
     # Script out objects for each DB
     $db = $sqlDatabase
@@ -329,40 +400,7 @@ foreach($sqlDatabase in $srv.databases)
     "15) Database Triggers" | out-file "$output_path\Database_Reconstruction_Order.txt" -Encoding ascii -Append
     
 
-
-    # Create some CSS for help in column formatting
-    $myCSS = 
-    "
-    table
-        {
-            Margin: 0px 0px 0px 4px;
-            Border: 1px solid rgb(190, 190, 190);
-            Font-Family: Tahoma;
-            Font-Size: 9pt;
-            Background-Color: rgb(252, 252, 252);
-        }
-    tr:hover td
-        {
-            Background-Color: rgb(150, 150, 220);
-            Color: rgb(255, 255, 255);
-        }
-    tr:nth-child(even)
-        {
-            Background-Color: rgb(242, 242, 242);
-        }
-    th
-        {
-            Text-Align: Left;
-            Color: rgb(150, 150, 220);
-            Padding: 1px 4px 1px 4px;
-        }
-    td
-        {
-            Vertical-Align: Top;
-            Padding: 1px 4px 1px 4px;
-        }
-    "
-
+    # Create CSS file
     $myCSS | out-file "$DBSettingsPath\HTMLReport.css" -Encoding ascii
    
     # Export DB Settings
@@ -373,9 +411,7 @@ foreach($sqlDatabase in $srv.databases)
     # -------------------------
     # Start Individual Objects
     # -------------------------
-    Write-Output "Looking for Dac Packages, Db Diagrams and Plan Guides"
-
-
+    
     # Tables
     Write-Output "$fixedDBName - Tables"
 

@@ -32,7 +32,7 @@
 	
 
 .LINK
-	https://github.com/gwalkey/SQLTranscriptase
+
 	
 	
 #>
@@ -48,6 +48,8 @@ Param(
 # Load SMO Assemblies
 Import-Module ".\LoadSQLSmo.psm1"
 LoadSQLSMO
+
+# Load More Assemblies
 
 
 # First, test for Domain Membership 
@@ -102,12 +104,6 @@ else
 #  Script Name
 Write-Host  -f Yellow -b Black "01 - Server Logins"
 
-# assume localhost
-if ($SQLInstance.length -eq 0)
-{
-	Write-Output "Assuming localhost"
-	$Sqlinstance = 'localhost'
-}
 
 # Usage Check
 if ($SQLInstance.Length -eq 0) 
@@ -150,7 +146,7 @@ try
 }
 catch
 {
-    Write-Host -f red "$SQLInstance appears offline - Try Windows Auth?"
+    Write-Host -f red "$SQLInstance appears offline - Try Windows Authorization."
     Set-Location $BaseFolder
 	exit
 }
@@ -200,54 +196,7 @@ else
 # Set scripter options to ensure only schema is scripted
 $scripter.Options.ScriptSchema 	        = $true;
 $scripter.Options.ScriptData 	        = $false;
-
-# Add your favorite options
-# https://msdn.microsoft.com/en-us/library/microsoft.sqlserver.management.smo.scriptingoptions.aspx
-$scripter.Options.AllowSystemObjects 	= $false
-$scripter.Options.AnsiFile 				= $true
-
-$scripter.Options.ClusteredIndexes 		= $true
-
-$scripter.Options.DriAllKeys            = $true
-$scripter.Options.DriForeignKeys        = $true
-$scripter.Options.DriChecks             = $true
-$scripter.Options.DriPrimaryKey         = $true
-$scripter.Options.DriUniqueKeys         = $true
-$scripter.Options.DriWithNoCheck        = $true
-$scripter.Options.DriAllConstraints 	= $true
-$scripter.Options.DriIndexes 			= $true
-$scripter.Options.DriClustered 			= $true
-$scripter.Options.DriNonClustered 		= $true
-
-$scripter.Options.EnforceScriptingOptions 	= $true
-$scripter.Options.ExtendedProperties    = $true
-
-$scripter.Options.FullTextCatalogs      = $true
-$scripter.Options.FullTextIndexes 		= $true
-$scripter.Options.FullTextStopLists     = $true
-$scripter.Options.IncludeFullTextCatalogRootPath= $true
-
-
-$scripter.Options.IncludeHeaders        = $false
-$scripter.Options.IncludeDatabaseRoleMemberships= $true
-$scripter.Options.Indexes 				= $true
-
-$scripter.Options.NoCommandTerminator 	= $false;
-$scripter.Options.NonClusteredIndexes 	= $true
-
-$scripter.Options.NoTablePartitioningSchemes = $false
-
-$scripter.Options.Permissions 			= $true
-
-$scripter.Options.SchemaQualify 		= $true
-$scripter.Options.SchemaQualifyForeignKeysReferences = $true
-
-$scripter.Options.ToFileOnly 			= $true
-
-
-# With Dependencies create one huge file for all tables in the order needed to maintain RefIntegrity
-$scripter.Options.WithDependencies		= $false
-$scripter.Options.XmlIndexes            = $true
+$scripter.Options.ToFileOnly 			= $true;
 
 
 # Create base output folder
@@ -326,24 +275,19 @@ foreach ($Login in $Logins)
         $ADGroupUsers = Get-AdGroupMember -identity $ADName -recursive | sort name
 
         # Export Users for this AD Group
-        # Write-Output ("Scripting out AD Group Membership for [{0}]..." -f $ADName)
-
-        $myoutputfile = $WinGroupSinglePath+"Users of "+$myFixedGroupName+".sql"
-        $myoutputstring = "-- These Domain Users are members of the SQL Login and Windows Group ["+$ADName+ "]`r`n"
+        $myoutputfile = $WinGroupSinglePath+"Users in "+$myFixedGroupName+".sql"
+        $myoutputstring = "-- These Domain Users are members of the SQL Login and Windows Group ["+$ADName+ "]`n"
         $myoutputstring | out-file -FilePath $myoutputfile -encoding ascii
-
+       
         # Create the Group Itself
         CopyObjectsToFiles $login $WinGroupSinglePath
 
         # Create the Users of this Group
         foreach($ADUser in $ADGroupUsers)
-        {
-            #$Aduser.SamAccountName | out-file -FilePath $myoutputfile -append -encoding ascii
+        {   
 
-            $CreateObjectName =            
-            "CREATE LOGIN ["+$ADDomain+"\"+$ADUser.SamAccountName+"] FROM WINDOWS WITH DEFAULT_DATABASE=[master], DEFAULT_LANGUAGE=[us_english]`n"
-
-            $CreateObjectName | out-file -FilePath $myoutputfile -append -encoding ascii
+            $CreateObjectName = "CREATE LOGIN ["+$ADDomain+"\"+$ADUser.SamAccountName+"] FROM WINDOWS WITH DEFAULT_DATABASE=[master], DEFAULT_LANGUAGE=[us_english] "
+            $CreateObjectName | out-file -FilePath $myoutputfile -append -Encoding ascii
         }
     }
 
@@ -363,8 +307,6 @@ foreach ($Login in $Logins)
     }
 
 }
-
-
  
 
 set-location $BaseFolder

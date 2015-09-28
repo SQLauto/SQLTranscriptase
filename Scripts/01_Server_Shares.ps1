@@ -19,7 +19,7 @@
 
 	
 .LINK
-	https://github.com/gwalkey/SQLTranscriptase
+
 	
 #>
 
@@ -144,8 +144,9 @@ td
 $myCSS | out-file "$fullfolderPath\HTMLReport.css" -Encoding ascii
 
 # Export It
+$RunTime = Get-date
 $mySettings = $ShareArray
-$mySettings | select Name, Path, Description  | ConvertTo-Html  -PreContent "<h1>$SqlInstance</H1><H2>Server Shares</h2>" -CSSUri "HtmlReport.css"| Set-Content "$fullfolderPath\Shares_Overview.html"
+$mySettings | select Name, Path, Description  | ConvertTo-Html -PostContent "<h3>Ran on : $RunTime</h3>"  -PreContent "<h1>$SqlInstance</H1><H2>Server Shares</h2>" -CSSUri "HtmlReport.css"| Set-Content "$fullfolderPath\Shares_Overview.html"
 
 # Loop Through Each Share, exporting NTFS and SMB permissions
 Write-Output "Dumping NTFS/SMB Share Permissions..."

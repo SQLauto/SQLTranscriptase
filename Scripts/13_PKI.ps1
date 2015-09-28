@@ -24,6 +24,7 @@
     Once the Database Master Key is restored, the Syms and ASyms are restored (because they live in the database)
     AKA, MS has no export routine for Sym/ASym keys
 
+	Might have to run this Elevated (As Administrator) on Windows 8+
 
 .Inputs
     ServerName, [SQLUser], [SQLPassword]
@@ -32,8 +33,7 @@
 
 
 .LINK
-	https://github.com/gwalkey/SQLTranscriptase
-	
+
 #>
 
 Param(
