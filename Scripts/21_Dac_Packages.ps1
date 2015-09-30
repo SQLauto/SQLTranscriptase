@@ -221,7 +221,7 @@ foreach($sqlDatabase in $srv.databases)
     {
         $myoutstring = [char]34+$pkgver + [char]34+ " /action:extract /sourcedatabasename:$myDB /sourceservername:$MyServer /targetfile:$MyDB.dacpac /sourceuser:$myuser /sourcepassword:$mypass `n"
     }
-    $myoutstring | out-file -FilePath "$Output_path\DacExtract.cmd" -Encoding ascii -append
+    Add-Content -Value $myoutstring -Path "$Output_path\DacExtract.cmd" -Encoding Ascii    
 
     # Register the Database as a Data Tier Application - if command-line parameter is true
     if ($registerDAC)

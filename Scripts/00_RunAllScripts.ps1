@@ -26,10 +26,9 @@
 
 
 Param(
-  [string]$SQLInstance,
+  [string]$SQLInstance="localhost",
   [string]$myuser,
-  [string]$mypass,
-  [int]$timestamp = 0
+  [string]$mypass
 )
 
 # --- TIPS ---
@@ -46,30 +45,12 @@ Import-Module ".\LoadSQLSmo.psm1"
 LoadSQLSMO
 
 # Load More Assemblies
-# Add-type –assemblyname system.speech | Out-Null
-# $talker = New-Object System.Speech.Synthesis.SpeechSynthesizer
+
 
 $startTime = get-date
 
 #  Script Name
 Write-Host -f Yellow -b Black "00 - RunAllScripts"
-#$talker.speak("Scripting started at $((Get-Date).ToShortTimeString())")
-
-# assume localhost
-if ($SQLInstance.length -eq 0)
-{
-	Write-Output "Assuming localhost"
-	$Sqlinstance = 'localhost'
-}
-
-
-# Usage Check
-if ($SQLInstance.Length -eq 0) 
-{
-    Write-host -f yellow "Usage: ./00_RunAllScripts.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if SQL Auth)"
-	set-location "$BaseFolder"
-    exit
-}
 
 
 # Server connection check
@@ -151,23 +132,11 @@ set-location $BaseFolder
 & .\24_Plan_Guides.ps1 $SQLInstance $myuser $mypass
 
 
-
-
+# Duration
 Write-Output "`r`n"
 $ElapsedTime = ((get-date) - $startTime)
 Write-Output ("$SQLInstance Elapsed time: {0:00}:{1:00}:{2:00}.{3:0000}" -f $ElapsedTime.Hours,$ElapsedTime.Minutes,$ElapsedTime.Seconds, $ElapsedTime.TotalMilliseconds)
 
-# TimeStamp the output folder for DIFF Operations
-if($timestamp -eq 1)
-{
-    $currentTime = get-date -f yyyy_MM_dd_HH_mm_ss
-    $oldFoldername = $baseFolder+"\"+$sqlinstance
-    $NewFolderName = $baseFolder+"\"+$sqlinstance+"_"+$currentTime
-    rename-item -path $oldFoldername -NewName $NewFolderName -force
-}
-
-# $talker = New-Object System.Speech.Synthesis.SpeechSynthesizer
-# $talker.speak("Scripting Success. You are the Man $env:USERNAME")
 
 set-location $BaseFolder
 exit
