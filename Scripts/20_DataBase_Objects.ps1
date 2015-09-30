@@ -42,7 +42,7 @@
 #>
 
 Param(
-    [string]$SQLInstance = "reportsdb",
+    [string]$SQLInstance = "localhost",
     [string]$myuser,
     [string]$mypass,
     [string]$myDatabase,
