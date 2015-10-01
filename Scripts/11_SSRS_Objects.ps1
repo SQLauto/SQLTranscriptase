@@ -32,7 +32,7 @@
 #>
 
 Param(
-  [string]$SQLInstance='localhost',
+  [string]$SQLInstance='reportsdb',
   [string]$myuser,
   [string]$mypass
 )
@@ -607,21 +607,76 @@ if(!(test-path -path "$fullfolderPathSUB\HTMLReport.css"))
 }
 
 
-Write-Output "Timed Subscriptions..."
+Write-Output "Visual Timed Subscriptions..."
 $RunTime = Get-date
 
-#Foreach ($Sked in $Skeds)
-#{
-    # OutPut FileName
-    $HTMLFileName = "$fullfolderPathSUB\Schedule.html"
+$HTMLFileName = "$fullfolderPathSUB\Visual_Subscription_Schedule.html"
 
 
-    $Skeds | select Folder, Report, State, RecurrenceType, RunTime, Weeks_Interval, Minutes_Interval, `
-    Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, `
-    Week_of_Month, Sun, Mon, Tue, Wed, Thu, Fri, Sat, RunHour,  `
-    00Z, 01Z, 02Z, 03Z, 04Z, 05Z, 06Z, 07Z, 08Z, 09Z, 10Z, 11Z, 12Z, 13Z, 14Z, 15Z, 16Z, 17Z, 18Z, 19Z, 20Z, 21Z, 22Z, 23Z `
-    | ConvertTo-Html -PostContent "<h3>Ran on : $RunTime</h3>" -CSSUri "HtmlReport.css"| Set-Content $HTMLFileName
-#}
+$Skeds | select Folder, Report, State, RecurrenceType, RunTime, Weeks_Interval, Minutes_Interval, `
+Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, `
+Week_of_Month, Sun, Mon, Tue, Wed, Thu, Fri, Sat, RunHour,  `
+00Z, 01Z, 02Z, 03Z, 04Z, 05Z, 06Z, 07Z, 08Z, 09Z, 10Z, 11Z, 12Z, 13Z, 14Z, 15Z, 16Z, 17Z, 18Z, 19Z, 20Z, 21Z, 22Z, 23Z `
+| ConvertTo-Html -PostContent "<h3>Ran on : $RunTime</h3>" -CSSUri "HtmlReport.css"| Set-Content $HTMLFileName
+
+# Script out the Create Subscription Commands
+Write-Output "Timed Subscription Create commands..."
+$mySubs = 
+"
+USE [ReportServer];
+
+select 
+	'exec CreateSubscription @id='+char(39)+convert(varchar(40),S.[SubscriptionID])+char(39)+', '+
+	'@Locale=N'+char(39)+S.[Locale]+char(39)+', '+
+	'@Report_Name=N'+char(39)+R.Name+char(39)+', '+
+	'@ReportZone='+char(39)+ convert(varchar,S.[ReportZone])+char(39)+', '+
+	'@OwnerSid='+char(39)+ '0x'+convert(varchar(max),Owner.[Sid],2)+char(39)+', '+
+	'@OwnerName=N'+char(39)+ SUSER_SNAME(Owner.[Sid])+char(39)+', '+
+	'@OwnerAuthType='+char(39)+ convert(varchar,Owner.[AuthType])+char(39)+', '+
+	'@DeliveryExtension=N'+char(39)+S.[DeliveryExtension]+char(39)+', '+
+	'@InactiveFlags='+char(39)+ convert(varchar,S.[InactiveFlags])+char(39)+', '+
+	'@ExtensionSettings=N'+char(39)+ replace(convert(varchar(max),S.[ExtensionSettings]),char(39),char(39)+char(39))+char(39)+', '+
+	'@ModifiedBySid='+char(39)+ '0x'+convert(varchar(max),Modified.[Sid],2)+char(39)+', '+
+	'@ModifiedByName=N'+char(39)+isnull(SUSER_SNAME(Modified.[Sid]),'')+char(39)+', '+
+	'@ModifiedByAuthType='+char(39)+ convert(varchar,Modified.AuthType)+char(39)+', '+
+	'@ModifiedDate='+char(39)+ convert(varchar, S.[ModifiedDate],120)+char(39)+', '+
+	'@Description=N'+char(39)+S.[Description]+char(39)+', '+
+	'@LastStatus=N'+char(39)+S.[LastStatus]+char(39)+', '+
+	'@EventType=N'+char(39)+S.[EventType]+char(39)+', '+
+	'@MatchData=N'+char(39)+ replace(convert(varchar(max),S.[MatchData]),char(34),char(39)+char(39))+char(39)+', '+
+	'@Parameters=N'+char(39)+ replace(convert(varchar(max),S.[Parameters]),char(39),char(39)+char(39))+char(39)+', '+
+	'@DataSettings=N'+char(39)+ replace(convert(varchar(max),isnull(S.[DataSettings],'')),char(39),char(39)+char(39))+char(39)+', '+
+	'@Version='+char(39)+ convert(varchar,S.[Version])+char(39) as 'ExecString'
+from
+    [Subscriptions] S inner join [Catalog] CAT on S.[Report_OID] = CAT.[ItemID]
+    inner join [Users] Owner on S.OwnerID = Owner.UserID
+    inner join [Users] Modified on S.ModifiedByID = Modified.UserID
+    left outer join [SecData] SD on CAT.PolicyID = SD.PolicyID AND SD.AuthType = Owner.AuthType
+    left outer join [ActiveSubscriptions] A on S.[SubscriptionID] = A.[SubscriptionID]
+	inner join [ReportServer].[dbo].[Catalog] R on S.Report_OID = r.ItemID;
+"
+
+if ($serverauth -eq "win")
+{
+    $SubCommands =  Invoke-Sqlcmd -MaxCharLength 10000000 -ServerInstance $SQLInstance -Query $mySubs
+}
+else
+{
+    $SubCommands =  Invoke-Sqlcmd -MaxCharLength 10000000 -ServerInstance $SQLInstance -Username $myuser -Password $mypass -Query $mySubs
+}
+
+# Script Out
+if ($SubCommands)
+{    
+    New-Item "$fullfolderPathSUB\Timed_Subscriptions.sql" -type file -force  |Out-Null
+
+    foreach ($TSub in $SubCommands)
+    {        
+        $TSub.ExecString | out-file -FilePath "$fullfolderPathSUB\Timed_Subscriptions.sql" -append -encoding ascii -width 500000
+    }
+
+}
+
 
 
 # --------------------
