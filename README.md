@@ -16,9 +16,6 @@ http://www.sqlsaturday.com/422/eventhome.aspx
 
 Upcoming Presentations:
 
-Pittsburg, PA - October 3 2015<br>
-http://www.sqlsaturday.com/440/eventhome.aspx
-
 Orlando, FL - October 10 2015<br>
 http://www.sqlsaturday.com/452/eventhome.aspx
 
