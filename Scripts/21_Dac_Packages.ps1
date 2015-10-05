@@ -40,7 +40,7 @@ Param(
   [string]$SQLInstance="localhost",
   [string]$myuser,
   [string]$mypass,
-  [bool]$registerDAC=$false
+  [int]$registerDAC=0
 )
 
 
@@ -190,7 +190,6 @@ Write-Output "Exporting Dac Packages..."
 # Create Batch file to run below
 $myoutstring = "@ECHO OFF`n" | out-file -FilePath "$Output_path\DacExtract.cmd" -Force -Encoding ascii
 
-
 foreach($sqlDatabase in $srv.databases)
 {
 
@@ -203,6 +202,13 @@ foreach($sqlDatabase in $srv.databases)
     $myServer = $SQLInstance   
     $fixedDBName = $db.name.replace('[','')
     $fixedDBName = $fixedDBName.replace(']','')
+
+    # Skip Offline Databases (SMO still enumerates them, but cant retrieve the objects)
+    if ($sqlDatabase.Status -ne 'Normal')     
+    {
+        Write-Output ("Skipping Offline: {0}" -f $sqlDatabase.Name)
+        continue
+    }
 
     # One Output folder per DB
     if(!(test-path -path $output_path))
@@ -221,10 +227,10 @@ foreach($sqlDatabase in $srv.databases)
     {
         $myoutstring = [char]34+$pkgver + [char]34+ " /action:extract /sourcedatabasename:$myDB /sourceservername:$MyServer /targetfile:$MyDB.dacpac /sourceuser:$myuser /sourcepassword:$mypass `n"
     }
-    Add-Content -Value $myoutstring -Path "$Output_path\DacExtract.cmd" -Encoding Ascii    
+    $myoutstring | out-file -FilePath "$Output_path\DacExtract.cmd" -Encoding ascii -append
 
-    # Register the Database as a Data Tier Application - if command-line parameter is true
-    if ($registerDAC)
+    # Register the Database as a Data Tier Application - if command-line parameter is set true
+    if ($registerDAC -eq 1)
     {
         ## Specify the DAC metadata.
         $applicationname = $fixedDBName
@@ -247,7 +253,16 @@ foreach($sqlDatabase in $srv.databases)
     # Create Drift Report batch file
     $myDriftFileName = $DriftOutput_path+"\"+$myDB+"_DriftReport.cmd"
     $myDriftReportName = $myDB+"_DriftReport.xml"
-    [char]34 + $pkgver + [char]34 + " /A:DriftReport /tsn:$myServer /tdn:$myDB /op:$myDriftReportName `n $myDriftReportName `n" | out-file -FilePath $myDriftFileName -Force -Encoding ascii
+
+    # SQLPackage.EXE needs DMZ username and password parameters passed in
+    if ($serverauth -eq "win")
+    {
+        [char]34 + $pkgver + [char]34 + " /A:DriftReport /tsn:$myServer /tdn:$myDB /op:$myDriftReportName `n $myDriftReportName `n" | out-file -FilePath $myDriftFileName -Force -Encoding ascii
+    }
+    else
+    {
+        [char]34 + $pkgver + [char]34 + " /A:DriftReport /tsn:$myServer /tdn:$myDB /tu:$myuser /tp:$mypass /op:$myDriftReportName `n $myDriftReportName `n" | out-file -FilePath $myDriftFileName -Force -Encoding ascii
+    }
 
 }
 
