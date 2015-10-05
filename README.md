@@ -19,7 +19,7 @@ http://www.sqlsaturday.com/421/eventhome.aspx
 Oklahoma City, OK - 2015<br>
 http://www.sqlsaturday.com/422/eventhome.aspx
 
-'''Upcoming Presentations:'''
+<b>Upcoming Presentations:</b>
 
 Orlando, FL - October 10, 2015<br>
 http://www.sqlsaturday.com/452/eventhome.aspx
