@@ -10,8 +10,13 @@ http://usergroup.tv/videos/scripting-out-sql-server-for-documentation-and-disast
 
 Previous Presentations:
 
+Richmond, VA - 2015
 https://www.sqlsaturday.com/381/eventhome.aspx
 
+Columbus, OH - 2015
+http://www.sqlsaturday.com/421/eventhome.aspx
+
+Oklahoma City, OK - 2015
 http://www.sqlsaturday.com/422/eventhome.aspx
 
 Upcoming Presentations:
