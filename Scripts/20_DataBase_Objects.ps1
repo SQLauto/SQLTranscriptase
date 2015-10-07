@@ -50,6 +50,7 @@ Param(
 
 )
 
+Set-StrictMode -Version latest;
 
 [string]$BaseFolder = (Get-Item -Path ".\" -Verbose).FullName
 
@@ -578,8 +579,9 @@ foreach($sqlDatabase in $srv.databases)
     @{Name='PrivateMemMB';Expression={($_.PrivateMemorySize64)/1MB}}
     #>
 
+    # Process Other Objecs    
 
-# Process Next Database
+    # Process Next Database
 }
 
 

@@ -46,6 +46,8 @@ Param(
   [string]$mypass
 )
 
+Set-StrictMode -Version latest;
+
 $dateStamp = (get-Date).ToString("yyyyMMdd")
 
 [string]$BaseFolder = (Get-Item -Path ".\" -Verbose).FullName

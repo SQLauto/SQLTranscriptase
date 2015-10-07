@@ -36,7 +36,9 @@ Param(
   [string]$mypass
 )
 
-#cls
+
+Set-StrictMode -Version latest;
+
 [string]$BaseFolder = (Get-Item -Path ".\" -Verbose).FullName
 
 Write-Host  -f Yellow -b Black "16 - Audits"
@@ -173,7 +175,12 @@ foreach($sqlDatabase in $srv.databases)
     $fixedDBName = $fixedDBName.replace(']','')
     $DB_Audit_output_path = "$BaseFolder\$SQLInstance\16 - Audits\$fixedDBName"
 
-    
+    # Skip Offline Databases (SMO still enumerates them, but cant retrieve the objects)
+    if ($sqlDatabase.Status -ne 'Normal')     
+    {
+        Write-Output ("Skipping Offline: {0}" -f $sqlDatabase.Name)
+        continue
+    }
             
     foreach($DBAudit in $db.DatabaseAuditSpecifications)
     {

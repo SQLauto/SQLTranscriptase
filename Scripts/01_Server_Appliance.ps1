@@ -40,11 +40,13 @@ Param(
     [string]$mypass
 )
 
+Set-StrictMode -Version latest;
 
 [string]$BaseFolder = (Get-Item -Path ".\" -Verbose).FullName
 
 # Import-Module "sqlps" -DisableNameChecking -erroraction SilentlyContinue
 Import-Module ".\LoadSQLSMO"
+Import-Module ".\Get-ProductKey.psm1"
 LoadSQLSMO
 
 
@@ -64,6 +66,10 @@ Write-Output "Server $SQLInstance"
 
 # fix target servername if given a SQL named instance
 $WinServer = ($SQLInstance -split {$_ -eq "," -or $_ -eq "\"})[0]
+
+
+# Test Get Product-Key
+$ProdKey = Get-ProductKey -Computername $winserver
 
 # Server connection check
 [string]$serverauth = "win"
@@ -160,67 +166,71 @@ else
 
 $myCreateDate = $sqlresults.column1
 $mystring =  "Server Create Date: " +$MyCreateDate
-$mystring| out-file $fullFileName -Encoding ascii -Append
+$mystring | out-file $fullFileName -Encoding ascii -Append
 
 $mystring =  "Server Name: " +$srv.Name 
-$mystring| out-file $fullFileName -Encoding ascii -Append
+$mystring | out-file $fullFileName -Encoding ascii -Append
 
 $mystring =  "SQL Version: " +$srv.Version 
-$mystring| out-file $fullFileName -Encoding ascii -Append
+$mystring | out-file $fullFileName -Encoding ascii -Append
 
 $mystring =  "SQL Edition: " +$srv.EngineEdition
-$mystring| out-file $fullFileName -Encoding ascii -Append
+$mystring | out-file $fullFileName -Encoding ascii -Append
 
 $mystring =  "SQL Build Number: " +$srv.BuildNumber
-$mystring| out-file $fullFileName -Encoding ascii -Append
+$mystring | out-file $fullFileName -Encoding ascii -Append
 
 $mystring =  "SQL Product: " +$srv.Product
-$mystring| out-file $fullFileName -Encoding ascii -Append
+$mystring | out-file $fullFileName -Encoding ascii -Append
 
 $mystring =  "SQL Product Level: " +$srv.ProductLevel
-$mystring| out-file $fullFileName -Encoding ascii -Append
+$mystring | out-file $fullFileName -Encoding ascii -Append
 
 $mystring =  "SQL Processors: " +$srv.Processors
-$mystring| out-file $fullFileName -Encoding ascii -Append
+$mystring | out-file $fullFileName -Encoding ascii -Append
 
 $mystring =  "SQL Max Physical Memory MB: " +$srv.PhysicalMemory
-$mystring| out-file $fullFileName -Encoding ascii -Append
+$mystring | out-file $fullFileName -Encoding ascii -Append
 
 $mystring =  "SQL Physical Memory in Use MB: " +$srv.PhysicalMemoryUsageinKB
-$mystring| out-file $fullFileName -Encoding ascii -Append
+$mystring | out-file $fullFileName -Encoding ascii -Append
 
 $mystring =  "SQL MasterDB Path: " +$srv.MasterDBPath
-$mystring| out-file $fullFileName -Encoding ascii -Append
+$mystring | out-file $fullFileName -Encoding ascii -Append
 
 $mystring =  "SQL MasterDB LogPath: " +$srv.MasterDBLogPath
-$mystring| out-file $fullFileName -Encoding ascii -Append
+$mystring | out-file $fullFileName -Encoding ascii -Append
 
 $mystring =  "SQL Backup Directory: " +$srv.BackupDirectory
-$mystring| out-file $fullFileName -Encoding ascii -Append
+$mystring | out-file $fullFileName -Encoding ascii -Append
 
 $mystring =  "SQL Install Shared Dir: " +$srv.InstallSharedDirectory
-$mystring| out-file $fullFileName -Encoding ascii -Append
+$mystring | out-file $fullFileName -Encoding ascii -Append
 
 $mystring =  "SQL Install Data Dir: " +$srv.InstallDataDirectory
-$mystring| out-file $fullFileName -Encoding ascii -Append
+$mystring | out-file $fullFileName -Encoding ascii -Append
 
 $mystring =  "SQL Service Account: " +$srv.ServiceAccount
-$mystring| out-file $fullFileName -Encoding ascii -Append
+$mystring | out-file $fullFileName -Encoding ascii -Append
 
 " " | out-file $fullFileName -Encoding ascii -Append
 
 # Windows
 $mystring =  "OS Version: " +$srv.OSVersion
-$mystring| out-file $fullFileName -Encoding ascii -Append
+$mystring | out-file $fullFileName -Encoding ascii -Append
 
 $mystring =  "OS Is Clustered: " +$srv.IsClustered
-$mystring| out-file $fullFileName -Encoding ascii -Append
+$mystring | out-file $fullFileName -Encoding ascii -Append
 
 $mystring =  "OS Is HADR: " +$srv.IsHadrEnabled
-$mystring| out-file $fullFileName -Encoding ascii -Append
+$mystring | out-file $fullFileName -Encoding ascii -Append
 
 $mystring =  "OS Platform: " +$srv.Platform
-$mystring| out-file $fullFileName -Encoding ascii -Append
+$mystring | out-file $fullFileName -Encoding ascii -Append
+
+$mystring =  "OS Product Key: " +$ProdKey.ProductKey
+$mystring | out-file $fullFileName -Encoding ascii -Append
+
 
 
 # Turn off default Error Handler for WMI
@@ -248,6 +258,7 @@ else
     Write-output "WMI Call to Win32_OperatingSystem class failed "| out-file $fullFileName -Encoding ascii -Append
 }
 
+" " | out-file $fullFileName -Encoding ascii -Append
 
 # Hardware
 # Turn off default Error Handler for WMI

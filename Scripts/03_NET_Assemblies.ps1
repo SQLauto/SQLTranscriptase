@@ -34,6 +34,8 @@ Param(
   [string]$mypass
 )
 
+Set-StrictMode -Version latest;
+
 [string]$BaseFolder = (Get-Item -Path ".\" -Verbose).FullName
 
 Write-Host  -f Yellow -b Black "03 - .NET Assemblies"

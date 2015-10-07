@@ -31,6 +31,7 @@ Param(
   [string]$mypass
 )
 
+Set-StrictMode -Version latest;
 
 #  Script Name
 Write-Host  -f Yellow -b Black "04 - Agent Proxies"

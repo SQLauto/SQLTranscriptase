@@ -32,6 +32,7 @@ Param(
   [string]$mypass
 )
 
+Set-StrictMode -Version latest;
 
 [string]$BaseFolder = (Get-Item -Path ".\" -Verbose).FullName
 
