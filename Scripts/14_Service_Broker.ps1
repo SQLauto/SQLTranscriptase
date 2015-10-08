@@ -223,10 +223,10 @@ foreach($sqlDatabase in $srv.databases)
     foreach($MsgType2 in $db.ServiceBroker.ServiceContracts)
     {
         # Script out objects for each DB
-        $strmyBrokerMsgTypeName = $MsgType2.Name
-        $strmyBrokerMsgType = $fixedDBName+"_Broker_Contract_"+$strmyBrokerMsgTypeName+".sql"
+        $strmyBrokerContractName = $MsgType2.Name
+        $strmyBrokerContract = $fixedDBName+"_Broker_Contract_"+$strmyBrokerContractName+".sql"
         $strmyBObj = $MsgType2.script()
-        $output_path = $DB_Broker_output_path+"\"+$strmyBrokerMsgType
+        $output_path = $DB_Broker_output_path+"\"+$strmyBrokerContract
 
         # Not system Objects
         if (!$MsgType2.IsSystemObject)
@@ -246,13 +246,13 @@ foreach($sqlDatabase in $srv.databases)
     foreach($MsgType3 in $db.ServiceBroker.Queues)
     {
         # Script out objects for each DB
-        $strmyBrokerMsgTypeName = $MsgType3.Name
-        $strmyBrokerMsgType = $fixedDBName+"_Broker_Queue_"+$strmyBrokerMsgTypeName+".sql"
+        $strmyBrokerQueueName = $MsgType3.Name
+        $strmyBrokerQueue = $fixedDBName+"_Broker_Queue_"+$strmyBrokerQueueName+".sql"
         try
         {
             $strmyBObj = $MsgType3.script()
         
-            $output_path = $DB_Broker_output_path+"\"+$strmyBrokerMsgType
+            $output_path = $DB_Broker_output_path+"\"+$strmyBrokerQueue
 
             # Not system Objects
             if (!$MsgType3.IsSystemObject)
@@ -268,7 +268,7 @@ foreach($sqlDatabase in $srv.databases)
         }
         catch
         {
-            #Write-Output "Skipping system queue $strmyBrokerMsgTypeName"
+            #Write-Output "Skipping system queue $strmyBrokerQueueName"
         }
     }
 
@@ -277,10 +277,11 @@ foreach($sqlDatabase in $srv.databases)
     foreach($MsgType4 in $db.ServiceBroker.Services)
     {
         # Script out objects for each DB
-        $strmyBrokerMsgTypeName = $MsgType4.Name
-        $strmyBrokerMsgType = $fixedDBName+"_Broker_Service_"+$strmyBrokerMsgTypeName+".sql"
+        $strmyBrokerServiceName = $MsgType4.Name
+        $strmyBrokerService = $fixedDBName+"_Broker_Service_"+$strmyBrokerServiceName+".sql"
         $strmyBObj = $MsgType4.script()
-        $output_path = $DB_Broker_output_path+"\"+$strmyBrokerMsgType
+        $output_path = $DB_Broker_output_path+"\"+$strmyBrokerService
+
 
         # Not system Objects
         if (!$MsgType4.IsSystemObject)
@@ -300,13 +301,14 @@ foreach($sqlDatabase in $srv.databases)
     foreach($MsgType5 in $db.ServiceBroker.Routes)
     {
         # Script out objects for each DB
-        $strmyBrokerMsgTypeName = $MsgType5.Name
-        $strmyBrokerMsgType = $fixedDBName+"_Broker_Route_"+$strmyBrokerMsgTypeName+".sql"
+        $strmyBrokerRouteName = $MsgType5.Name
+        $strmyBrokerRoute = $fixedDBName+"_Broker_Route_"+$strmyBrokerRouteName+".sql"
         $strmyBObj = $MsgType5.script()
-        $output_path = $DB_Broker_output_path+"\"+$strmyBrokerMsgType
+        $output_path = $DB_Broker_output_path+"\"+$strmyBrokerRoute
 
-        # Not system Objects
-        if (!$MsgType5.IsSystemObject -and $MsgType5.Name -ne "AutoCreatedLocal")
+
+        # Skip system Objects
+        if ($MsgType5.Name -ne "AutoCreatedLocal")
         {
             # Only create path if something to write
             if(!(test-path -path $DB_Broker_output_path))
@@ -316,6 +318,7 @@ foreach($sqlDatabase in $srv.databases)
             $strmyBObj | out-file $output_path -Force -encoding ascii
             $anyfound = $true
         }
+
     }
 
 if ($anyfound-eq $true)

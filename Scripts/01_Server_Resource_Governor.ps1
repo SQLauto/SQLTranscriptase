@@ -105,9 +105,15 @@ function CopyObjectsToFiles($objects, $outDir) {
 			
 			$schemaPrefix = ""
 			
+            try
+            {
 			if ($o.Schema -ne $null -and $o.Schema -ne "") {
 				$schemaPrefix = $o.Schema + "."
 			}
+            }
+            catch
+            {
+            }
 		
 			$fixedOName = $o.name.replace('\','_')			
 			$scripter.Options.FileName = $outDir + $schemaPrefix + $fixedOName + ".sql"
@@ -198,7 +204,7 @@ if(!(test-path -path $output_path))
 
 #pools
 $pools = $srv.ResourceGovernor.ResourcePools | where-object -FilterScript {$_.Name -notin "internal","default"}
-if ($pools.Count -gt 0)
+if ($pools -ne $null)
 {
     CopyObjectsToFiles $pools $output_path
 }

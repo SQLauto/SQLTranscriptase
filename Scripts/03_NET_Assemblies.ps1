@@ -167,7 +167,7 @@ foreach($sqlDatabase in $srv.databases)
     }
 
     # Any results?
-    if ($results.count -gt 0)
+    if ($results -ne $null)
     {
         Write-Output "Scripting out .NET Assemblies for: "$fixedDBName
     }

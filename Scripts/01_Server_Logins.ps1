@@ -166,9 +166,15 @@ function CopyObjectsToFiles($objects, $outDir) {
 			
 			$schemaPrefix = ""
 			
+            try
+            {
 			if ($o.Schema -ne $null -and $o.Schema -ne "") {
 				$schemaPrefix = $o.Schema + "."
 			}
+            }
+            catch
+            {
+            }
 		
 			$fixedOName = $o.name.replace('\','_')			
 			$scripter.Options.FileName = $outDir + $schemaPrefix + $fixedOName + ".sql"
@@ -236,7 +242,7 @@ $logins = $srv.Logins
 
 foreach ($Login in $Logins)
 {
-
+       
     # Skip non-Domain logins that look like Domain Logins (contain "\")
     if ($Login.Name -like "NT SERVICE\*") {continue}
     if ($Login.Name -like "NT AUTHORITY\*") {continue}    
@@ -294,7 +300,7 @@ foreach ($Login in $Logins)
     }
 
 
-    # Windows Domain Users
+    # Windows Users
     if ($Login.LoginType -eq "WindowsUser")
     {
         Write-Output ("Scripting out: {0}" -f $Login.Name)

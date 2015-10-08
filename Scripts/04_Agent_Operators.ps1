@@ -197,9 +197,15 @@ Foreach ($row in $results)
 	Add-Content -Value "`r`n" -Path "$fullfolderPath\Agent_Operators.sql" -Encoding Ascii
 }
 
-if ($results.Count -gt 0)
+try
 {
-    Write-Output ("{0} Operators Exported" -f $results.count)
+    if ($results -ne $null)
+    {
+        Write-Output ("{0} Operators Exported" -f $results.count)
+    }
+}
+catch
+{
 }
 
 
