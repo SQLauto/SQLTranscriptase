@@ -46,7 +46,6 @@ Set-StrictMode -Version latest;
 
 # Import-Module "sqlps" -DisableNameChecking -erroraction SilentlyContinue
 Import-Module ".\LoadSQLSMO"
-Import-Module ".\Get-ProductKey.psm1"
 LoadSQLSMO
 
 
@@ -67,9 +66,6 @@ Write-Output "Server $SQLInstance"
 # fix target servername if given a SQL named instance
 $WinServer = ($SQLInstance -split {$_ -eq "," -or $_ -eq "\"})[0]
 
-
-# Test Get Product-Key
-$ProdKey = Get-ProductKey -Computername $winserver
 
 # Server connection check
 [string]$serverauth = "win"
@@ -227,10 +223,6 @@ $mystring | out-file $fullFileName -Encoding ascii -Append
 
 $mystring =  "OS Platform: " +$srv.Platform
 $mystring | out-file $fullFileName -Encoding ascii -Append
-
-$mystring =  "OS Product Key: " +$ProdKey.ProductKey
-$mystring | out-file $fullFileName -Encoding ascii -Append
-
 
 
 # Turn off default Error Handler for WMI
