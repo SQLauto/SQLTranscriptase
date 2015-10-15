@@ -116,6 +116,33 @@ catch
 }
 
 
+# Check for Express version and exit - No Agent
+# Turn off default error handler
+$old_ErrorActionPreference = $ErrorActionPreference
+$ErrorActionPreference = 'SilentlyContinue'	
+
+$EditionSQL = "SELECT SERVERPROPERTY('Edition')"
+
+if ($serverauth -eq "win")
+{
+    $Edition = Invoke-SqlCmd -query $EditionSQL -Server $SQLInstance
+}
+else
+{
+    $Edition = Invoke-SqlCmd -query $EditionSQL  -Server $SQLInstance –Username $myuser –Password $mypass    
+}
+
+if ($Edition -ne $null )
+{
+    if ($edition.column1 -match "Express")
+    {
+        Write-Output ("Skipping '{0}'" -f $Edition.column1)
+        exit
+    }    
+}
+
+# Reset default PS error handler
+$ErrorActionPreference = $old_ErrorActionPreference 
 
 # Turn off default error handler
 $old_ErrorActionPreference = $ErrorActionPreference
@@ -741,7 +768,9 @@ update t
 set StartHour = OriginalStartHour 
 from @AgentSked t
 
-select * from @AgentSked order by StartHour, Sked, job
+select * from @AgentSked 
+where job_enabled = 1
+order by StartHour, Sked, job
 
 
 "
@@ -749,11 +778,11 @@ select * from @AgentSked order by StartHour, Sked, job
 # Get the Agent Job Sked from SQL
 if ($serverauth -eq "win")
 {
-    $Skeds =  Invoke-Sqlcmd -MaxCharLength 100000000 -ServerInstance $SQLInstance -Query $sql2
+    $LiveSkeds =  Invoke-Sqlcmd -MaxCharLength 100000000 -ServerInstance $SQLInstance -Query $sql2
 }
 else
 {
-    $Skeds =  Invoke-Sqlcmd -MaxCharLength 100000000 -ServerInstance $SQLInstance -Username $myuser -Password $mypass -Query $sql2
+    $LiveSkeds =  Invoke-Sqlcmd -MaxCharLength 100000000 -ServerInstance $SQLInstance -Username $myuser -Password $mypass -Query $sql2
 }
 
 
@@ -796,16 +825,20 @@ if(!(test-path -path "$fullfolderPath\HTMLReport.css"))
     $myCSS | out-file "$fullfolderPath\HTMLReport.css" -Encoding ascii    
 }
 
-# Export the Job Schedules to HTML
-$Skeds | select Sked, Sked_Enabled, Job, Job_Enabled, Frequency, Freq_Interval, Freq_SubDay_Type, Freq_SubDay_Interval, StartDate, StartTime, StartHour, `
-00Z, 01Z, 02Z, 03Z, 04Z, 05Z, 06Z, 07Z, 08Z, 09Z, 10Z, 11Z, 12Z, 13Z, 14Z, 15Z, 16Z, 17Z, 18Z, 19Z, 20Z, 21Z, 22Z, 23Z `
-| ConvertTo-Html  -PreContent "<h1>$SqlInstance</H1><H2>SQL Agent Job Schedules</h2>" -CSSUri "HtmlReport.css"| Set-Content "$fullfolderPath\AgentJobSchedules.html"
 
-# Export the Job Schedules to CSV
-$Skeds | select Sked, Sked_Enabled, Job, Job_Enabled, Frequency, Freq_Interval, Freq_SubDay_Type, Freq_SubDay_Interval, StartDate, StartTime, StartHour, `
+$RunTime = Get-date
+# Export the Enabled Job Schedules to HTML
+$LiveSkeds | select Sked, Sked_Enabled, Job, Job_Enabled, Frequency, Freq_Interval, Freq_SubDay_Type, Freq_SubDay_Interval, StartDate, StartTime, StartHour, `
+00Z, 01Z, 02Z, 03Z, 04Z, 05Z, 06Z, 07Z, 08Z, 09Z, 10Z, 11Z, 12Z, 13Z, 14Z, 15Z, 16Z, 17Z, 18Z, 19Z, 20Z, 21Z, 22Z, 23Z `
+| ConvertTo-Html  -PreContent "<h1>$SqlInstance</H1><H2>SQL Agent Job Schedules</h2>" -CSSUri "HtmlReport.css" -PostContent "<h3>Ran on : $RunTime</h3>"| Set-Content "$fullfolderPath\AgentJobSchedules.html"
+
+# Export the Enabled Job Schedules to CSV
+$LiveSkeds | select Sked, Sked_Enabled, Job, Job_Enabled, Frequency, Freq_Interval, Freq_SubDay_Type, Freq_SubDay_Interval, StartDate, StartTime, StartHour, `
 00Z, 01Z, 02Z, 03Z, 04Z, 05Z, 06Z, 07Z, 08Z, 09Z, 10Z, 11Z, 12Z, 13Z, 14Z, 15Z, 16Z, 17Z, 18Z, 19Z, 20Z, 21Z, 22Z, 23Z `
 | export-CSV -LiteralPath "$fullfolderPath\AgentJobSchedules.csv"
 
+
+Write-Output ("{0} Agent Jobs Exported"  -f $LiveSkeds.count)
 
 # Return to Base
 set-location $BaseFolder

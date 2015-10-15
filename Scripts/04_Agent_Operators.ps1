@@ -191,22 +191,18 @@ if ($results -eq $null )
 $ErrorActionPreference = $old_ErrorActionPreference 
 
 New-Item "$fullfolderPath\Agent_Operators.sql" -type file -force  |Out-Null
+
+[int]$countproperty = 0;
 Foreach ($row in $results)
 {
     $row.column1 | out-file "$fullfolderPath\Agent_Operators.sql" -Encoding ascii -Append
 	Add-Content -Value "`r`n" -Path "$fullfolderPath\Agent_Operators.sql" -Encoding Ascii
+    $countproperty = $countproperty +1;
 }
 
-try
-{
-    if ($results -ne $null)
-    {
-        Write-Output ("{0} Operators Exported" -f $results.count)
-    }
-}
-catch
-{
-}
+
+Write-Output ("{0} Operators Exported" -f $countproperty)
+
 
 
 set-location $BaseFolder

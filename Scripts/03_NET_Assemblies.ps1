@@ -123,7 +123,7 @@ if(!(test-path -path $output_path))
 foreach($sqlDatabase in $srv.databases) 
 {
 
-    # Skip System Databases - unless you actually installed SOME DLLs here!- bad monkey
+    # Skip System Databases - unless you actually installed some DLLs in those!- bad monkey
     if ($sqlDatabase.Name -in 'Master','Model','MSDB','TempDB','SSISDB') {continue}
 
 
@@ -167,7 +167,9 @@ foreach($sqlDatabase in $srv.databases)
     }
 
     # Any results?
-    if ($results -ne $null)
+    try
+    {
+    if ($results.count -gt 0)
     {
         Write-Output "Scripting out .NET Assemblies for: "$fixedDBName
     }
@@ -183,7 +185,9 @@ foreach($sqlDatabase in $srv.databases)
         $myoutputfile = $output_path+"\"+$assembly.AName+'.sql'        
         $myoutputstring = $assembly.Content
         $myoutputstring | out-file -FilePath $myoutputfile -encoding ascii -width 50000000
-    } 
+    }
+    }
+    catch {} 
             
 
 # Process Next Database

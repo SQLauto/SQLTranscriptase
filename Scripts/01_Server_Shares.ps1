@@ -53,6 +53,14 @@ $ShareArray = @()
 # WMI connects to the Windows Server Name, not the SQL Server Named Instance
 $WinServer = ($SQLInstance -split {$_ -eq "," -or $_ -eq "\"})[0]
 
+# Output folder
+$fullfolderPath = "$BaseFolder\$sqlinstance\01 - Server Shares\"
+if(!(test-path -path $fullfolderPath))
+{
+    mkdir $fullfolderPath | Out-Null
+}
+
+
 $old_ErrorActionPreference = $ErrorActionPreference
 $ErrorActionPreference = 'SilentlyContinue'
 
@@ -66,26 +74,14 @@ try
         Write-Output "Good WMI Connection"
     }
     else
-    {
-    #Warn User
-        Write-Host -b black -f red "Access Denied using WMI against target server"
-        
-        $fullfolderpath = "$BaseFolder\$SQLInstance\"
-        if(!(test-path -path $fullfolderPath))
-        {
-            mkdir $fullfolderPath | Out-Null
-        }
+    {   
         echo null > "$fullfolderpath\01 - Server Shares - WMI Could not connect.txt"
-        
         Set-Location $BaseFolder
         exit
     }
 }
 catch
 {
-    #Warn User
-    Write-Host -b black -f red "Access Denied using WMI against target server"
-    
     $fullfolderpath = "$BaseFolder\$SQLInstance\"
     if(!(test-path -path $fullfolderPath))
     {
@@ -101,12 +97,6 @@ catch
 # Reset default PS error handler - for WMI error trapping
 $ErrorActionPreference = $old_ErrorActionPreference 
 
-
-$fullfolderPath = "$BaseFolder\$sqlinstance\01 - Server Shares\"
-if(!(test-path -path $fullfolderPath))
-{
-    mkdir $fullfolderPath | Out-Null
-}
 
 
 # Create some CSS for help in column formatting
@@ -159,7 +149,7 @@ if(!(test-path -path $PermPath))
     mkdir $PermPath | Out-Null
 }
 $permpathfile = $PermPath + "NTFS_Permissions.txt"
-"NTFS File Permissions for $Winserver" | out-file -FilePath $permpathfile -encoding ascii
+"NTFS File Permissions for $Winserver shares`r" | out-file -FilePath $permpathfile -encoding ascii
 
 $SMBPath = "$BaseFolder\$sqlinstance\01 - Server Shares\SMB_Permissions\"
 if(!(test-path -path $SMBPath))
@@ -167,12 +157,16 @@ if(!(test-path -path $SMBPath))
     mkdir $SMBPath | Out-Null
 }
 $SMBPathfile = $SMBPath + "SMB_Permissions.txt"
-"SMB Share Permissions for $Winserver" | out-file -FilePath $SMBPathfile -encoding ascii
+"SMB Share Permissions for $Winserver shares`r" | out-file -FilePath $SMBPathfile -encoding ascii
 
 Function Get-NtfsRights($name,$path,$comp)
 {
 	$path = [regex]::Escape($path)
 	$share = "\\$comp\$name"
+
+    $old_ErrorActionPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'SilentlyContinue'
+
 	$wmi = gwmi Win32_LogicalFileSecuritySetting -filter "path='$path'" -ComputerName $comp
 	$wmi.GetSecurityDescriptor().Descriptor.DACL | where {$_.AccessMask -as [Security.AccessControl.FileSystemRights]} |select `
 				@{name="Principal";Expression={"{0}\{1}" -f $_.Trustee.Domain,$_.Trustee.name}},
@@ -180,6 +174,9 @@ Function Get-NtfsRights($name,$path,$comp)
 				@{name="AceFlags";Expression={[Security.AccessControl.AceFlags] $_.AceFlags }},
 				@{name="AceType";Expression={[Security.AccessControl.AceType] $_.AceType }},
 				@{name="ShareName";Expression={$share}}
+
+    # Reset default PS error handler - for WMI error trapping
+    $ErrorActionPreference = $old_ErrorActionPreference 
 }
 
 foreach($Share in $ShareArray)
@@ -190,10 +187,19 @@ foreach($Share in $ShareArray)
     if ($Share.name -eq "IPC$") {continue}
     if ($Share.name -eq "ADMIN$") {continue}
     
-    $SharePath = $Share.Path
+    # Skip shares with spaces in the path  - can you even connect to these?
+    # $Share.path
+
+    if ($Share.path.Contains(' '))
+     {
+        Write-Output ("--> Could not script out Share [{0}], with Path [{1}]" -f $share.name, $share.path)
+        continue
+     }
+
+    # Get Security Descriptors on NTFS for the share
     $acl = Get-NtfsRights $Share.Name $Share.Path $WinServer
- 
-    # File/NTFS Permissions
+
+    # Enum
     foreach($accessRule in $acl)
     {
         Write-Output ("Share: {0}, Path: {1}, Identity: {2}, Rights: {3}" -f $accessRule.ShareName, $Share.path, $accessRule.Principal, $accessRule.Rights)
@@ -202,9 +208,7 @@ foreach($Share in $ShareArray)
 
     Write-Output ("`r`n") | out-file -FilePath $permpathfile -append -encoding ascii
    
-    
-
-    # Share/SMB Perms
+    # Get Share SMB Perms
     $ShareName = $Share.Name
     $SMBShare = Get-WmiObject win32_LogicalShareSecuritySetting -Filter "name='$ShareName'" -ComputerName $WinServer
     if($SMBShare)
@@ -226,10 +230,8 @@ foreach($Share in $ShareArray)
             Write-Output ("Share: {0}, Domain: {1}, User: {2}, Permission: {3}" -f $ShareName, $Domain, $User, $Perm)
             Write-Output ("Share: {0}, Domain: {1}, User: {2}, Permission: {3}" -f $ShareName, $Domain, $User, $Perm) | out-file -FilePath $SMBPathfile -append -encoding ascii            
             
-            }
-    
+        }
     }
-    
 }
 
 set-location "$BaseFolder"

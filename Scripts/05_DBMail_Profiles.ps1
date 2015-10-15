@@ -107,7 +107,12 @@ else
 }
 
 # Get Database Mail configuration objects
-$ProfileCount = $srv.Mail.Profiles.Count
+[int]$ProfileCount = 0;
+try
+{
+    $ProfileCount = $srv.Mail.Profiles.Count
+}
+catch {}
 
 # Export Them
 if ($ProfileCount -gt 0)

@@ -89,6 +89,35 @@ catch
 }
 
 
+# Check for Express version and exit - No Agent
+# Turn off default error handler
+$old_ErrorActionPreference = $ErrorActionPreference
+$ErrorActionPreference = 'SilentlyContinue'	
+
+$EditionSQL = "SELECT SERVERPROPERTY('Edition')"
+
+if ($serverauth -eq "win")
+{
+    $Edition = Invoke-SqlCmd -query $EditionSQL -Server $SQLInstance
+}
+else
+{
+    $Edition = Invoke-SqlCmd -query $EditionSQL  -Server $SQLInstance –Username $myuser –Password $mypass    
+}
+
+if ($Edition -ne $null )
+{
+    if ($edition.column1 -match "Express")
+    {
+        Write-Output ("Skipping '{0}'" -f $Edition.column1)
+        exit
+    }    
+}
+
+# Reset default PS error handler
+$ErrorActionPreference = $old_ErrorActionPreference 
+
+
 function CopyObjectsToFiles($objects, $outDir) {
 	
 	if (-not (Test-Path $outDir)) {
@@ -101,9 +130,13 @@ function CopyObjectsToFiles($objects, $outDir) {
 			
 			$schemaPrefix = ""
 			
+            try
+            {
 			if ($o.Schema -ne $null -and $o.Schema -ne "") {
 				$schemaPrefix = $o.Schema + "."
 			}
+            }
+            catch {}
 			
 			$myProxyname = $o.Name
 			$myProxyname = $myProxyname.Replace('\', '-')
@@ -150,9 +183,20 @@ if(!(test-path -path $proxy_path))
 }
 
 # Export Agent Proxy Object Collection
-$pa = $srv.JobServer.ProxyAccounts
-CopyObjectsToFiles $pa $proxy_path
+# Get Database Mail configuration objects
+[int]$ProxyCount = 0;
+try
+{
+    $ProxyCount = $srv.Jobserver.ProxyAccounts.Count
+}
+catch {}
 
-Write-Output ("{0} Agent Proxies Exported" -f $pa.count)
+if ($ProxyCount -gt 0)
+{
+    $pa = $srv.JobServer.ProxyAccounts
+    CopyObjectsToFiles $pa $proxy_path
+}
+
+Write-Output ("{0} Agent Proxies Exported" -f $ProxyCount)
 
 set-location $BaseFolder

@@ -46,7 +46,6 @@ Set-StrictMode -Version latest;
 
 # Import-Module "sqlps" -DisableNameChecking -erroraction SilentlyContinue
 Import-Module ".\LoadSQLSMO"
-Import-Module ".\Get-ProductKey.psm1"
 LoadSQLSMO
 
 
@@ -68,8 +67,6 @@ Write-Output "Server $SQLInstance"
 $WinServer = ($SQLInstance -split {$_ -eq "," -or $_ -eq "\"})[0]
 
 
-# Test Get Product-Key
-$ProdKey = Get-ProductKey -Computername $winserver
 
 # Server connection check
 [string]$serverauth = "win"
@@ -120,10 +117,6 @@ if(!(test-path -path $fullfolderPath))
 	mkdir $fullfolderPath | Out-Null
 }
 
-
-# Load SMO Assemblies
-Import-Module ".\LoadSQLSmo.psm1"
-LoadSQLSMO
 
 # Set Local Vars
 [string]$server = $SQLInstance
@@ -228,34 +221,31 @@ $mystring | out-file $fullFileName -Encoding ascii -Append
 $mystring =  "OS Platform: " +$srv.Platform
 $mystring | out-file $fullFileName -Encoding ascii -Append
 
-$mystring =  "OS Product Key: " +$ProdKey.ProductKey
-$mystring | out-file $fullFileName -Encoding ascii -Append
-
-
 
 # Turn off default Error Handler for WMI
 $old_ErrorActionPreference = $ErrorActionPreference
 $ErrorActionPreference = 'SilentlyContinue'
 
-$mystring = Get-WmiObject –class Win32_OperatingSystem -ComputerName $server | select Name, BuildNumber, BuildType, CurrentTimeZone, InstallDate, SystemDrive, SystemDevice, SystemDirectory
+$mystring2 = Get-WmiObject –class Win32_OperatingSystem -ComputerName $server | select Name, BuildNumber, BuildType, CurrentTimeZone, InstallDate, SystemDrive, SystemDevice, SystemDirectory
 
 # Reset default PS error handler
 $ErrorActionPreference = $old_ErrorActionPreference
 
-if ($mystring -ne $null)
+try
 {
-    Write-output ("OS Host Name: {0} " -f $mystring.Name)| out-file $fullFileName -Encoding ascii -Append
-    Write-output ("OS BuildNumber: {0} " -f $mystring.BuildNumber)| out-file $fullFileName -Encoding ascii -Append
-    Write-output ("OS Buildtype: {0} " -f $mystring.BuildType)| out-file $fullFileName -Encoding ascii -Append
-    Write-output ("OS CurrentTimeZone: {0}" -f $mystring.CurrentTimeZone)| out-file $fullFileName -Encoding ascii -Append
-    Write-output ("OS InstallDate: {0} " -f $mystring.InstallDate)| out-file $fullFileName -Encoding ascii -Append
-    Write-output ("OS SystemDrive: {0} " -f $mystring.SystemDrive)| out-file $fullFileName -Encoding ascii -Append
-    Write-output ("OS SystemDevice: {0} " -f $mystring.SystemDevice)| out-file $fullFileName -Encoding ascii -Append
-    Write-output ("OS SystemDirectory: {0} " -f $mystring.SystemDirectory)| out-file $fullFileName -Encoding ascii -Append
+    Write-output ("OS Host Name: {0} " -f $mystring2.Name)| out-file $fullFileName -Encoding ascii -Append
+    Write-output ("OS BuildNumber: {0} " -f $mystring2.BuildNumber)| out-file $fullFileName -Encoding ascii -Append
+    Write-output ("OS Buildtype: {0} " -f $mystring2.BuildType)| out-file $fullFileName -Encoding ascii -Append
+    Write-output ("OS CurrentTimeZone: {0}" -f $mystring2.CurrentTimeZone)| out-file $fullFileName -Encoding ascii -Append
+    Write-output ("OS InstallDate: {0} " -f $mystring2.InstallDate)| out-file $fullFileName -Encoding ascii -Append
+    Write-output ("OS SystemDrive: {0} " -f $mystring2.SystemDrive)| out-file $fullFileName -Encoding ascii -Append
+    Write-output ("OS SystemDevice: {0} " -f $mystring2.SystemDevice)| out-file $fullFileName -Encoding ascii -Append
+    Write-output ("OS SystemDirectory: {0} " -f $mystring2.SystemDirectory)| out-file $fullFileName -Encoding ascii -Append
 }
-else
+catch
 {
-    Write-output "WMI Call to Win32_OperatingSystem class failed "| out-file $fullFileName -Encoding ascii -Append
+    Write-output "Error getting OS specs via WMI - WMI/firewall issue?"| out-file $fullFileName -Encoding ascii -Append
+    Write-output "Error getting OS specs via WMI - WMI/firewall issue?"
 }
 
 " " | out-file $fullFileName -Encoding ascii -Append
@@ -265,56 +255,55 @@ else
 $old_ErrorActionPreference = $ErrorActionPreference
 $ErrorActionPreference = 'SilentlyContinue'
 
-$mystring = Get-WmiObject -class Win32_Computersystem -ComputerName $server | select manufacturer
+$mystring3 = Get-WmiObject -class Win32_Computersystem -ComputerName $server | select manufacturer
 
 # Reset default PS error handler
 $ErrorActionPreference = $old_ErrorActionPreference
 
-if ($mystring -ne $null)
+try
 {
-    Write-output ("HW Manufacturer: {0} " -f $mystring.Manufacturer)| out-file $fullFileName -Encoding ascii -Append
+    Write-output ("HW Manufacturer: {0} " -f $mystring3.Manufacturer)| out-file $fullFileName -Encoding ascii -Append
 }
-else
+catch
 {
-    Write-output "WMI Call to Win32_Computersystem class failed "| out-file $fullFileName -Encoding ascii -Append
+    Write-output "Error getting Hardware specs via WMI - WMI/firewall issue? "| out-file $fullFileName -Encoding ascii -Append
+    Write-output "Error getting Hardware specs via WMI - WMI/firewall issue? "
 }
+
+" " | out-file $fullFileName -Encoding ascii -Append
 
 # Turn off default Error Handler for WMI
 $old_ErrorActionPreference = $ErrorActionPreference
 $ErrorActionPreference = 'SilentlyContinue'
 
-$mystring = Get-WmiObject –class Win32_processor -ComputerName $server | select Name,NumberOfCores,NumberOfLogicalProcessors
+$mystring4 = Get-WmiObject –class Win32_processor -ComputerName $server | select Name,NumberOfCores,NumberOfLogicalProcessors
 
 # Reset default PS error handler
 $ErrorActionPreference = $old_ErrorActionPreference
 
-if ($mystring -ne $null)
+try
 {
-    Write-output ("HW Processor: {0} " -f $mystring.Name)| out-file $fullFileName -Encoding ascii -Append
-    Write-Output ("HW CPUs: {0}" -f $mystring.NumberOfLogicalProcessors)| out-file $fullFileName -Encoding ascii -Append
-    Write-output ("HW Cores: {0}" -f $mystring.NumberOfCores)| out-file $fullFileName -Encoding ascii -Append
+    Write-output ("HW Processor: {0} " -f $mystring4.Name)| out-file $fullFileName -Encoding ascii -Append
+    Write-Output ("HW CPUs: {0}" -f $mystring4.NumberOfLogicalProcessors)| out-file $fullFileName -Encoding ascii -Append
+    Write-output ("HW Cores: {0}" -f $mystring4.NumberOfCores)| out-file $fullFileName -Encoding ascii -Append
 }
-else
+catch
 {
-    Write-output "WMI Call to Win32_processor class failed "| out-file $fullFileName -Encoding ascii -Append
+    Write-output "Error getting CPU specs via WMI - WMI/Firewall issue? "| out-file $fullFileName -Encoding ascii -Append
+    Write-output "Error getting CPU specs via WMI - WMI/Firewall issue? "
 }
 
-<#
-Use WMI: 2008 doesnt have System Mainboard String in the Log
-$mystring =  $srv.ReadErrorLog(0) | where-object {$_.Text -like "System*"} |select text
-"HW Mainboard/Model: " + $mystring.text | out-file $fullFileName -Encoding ascii -Append
-#>
+" " | out-file $fullFileName -Encoding ascii -Append
+
+$mystring5 =  "`r`nSQL Build reference: http://sqlserverbuilds.blogspot.com/ "
+$mystring5| out-file $fullFileName -Encoding ascii -Append
+
+$mystring5 =  "`r`nSQL Build reference: http://sqlserverupdates.com/ "
+$mystring5| out-file $fullFileName -Encoding ascii -Append
 
 
-$mystring =  "`r`nSQL Build reference: http://sqlserverbuilds.blogspot.com/ "
-$mystring| out-file $fullFileName -Encoding ascii -Append
-
-$mystring =  "`r`nSQL Build reference: http://sqlserverupdates.com/ "
-$mystring| out-file $fullFileName -Encoding ascii -Append
-
-
-$mystring = "`r`nMore Detailed Diagnostic Queries here:`r`nhttp://www.sqlskills.com/blogs/glenn/sql-server-diagnostic-information-queries-for-september-2015"
-$mystring| out-file $fullFileName -Encoding ascii -Append
+$mystring5 = "`r`nMore Detailed Diagnostic Queries here:`r`nhttp://www.sqlskills.com/blogs/glenn/sql-server-diagnostic-information-queries-for-september-2015"
+$mystring5| out-file $fullFileName -Encoding ascii -Append
 
 # Dump out loaded DLLs
 $mySQLquery = "select * from sys.dm_os_loaded_modules order by name"
@@ -322,11 +311,11 @@ $mySQLquery = "select * from sys.dm_os_loaded_modules order by name"
 # connect correctly
 if ($serverauth -eq "win")
 {
-    $sqlresults = Invoke-SqlCmd -ServerInstance $SQLInstance -Query $mySQLquery -QueryTimeout 10 -erroraction SilentlyContinue
+    $sqlresults2 = Invoke-SqlCmd -ServerInstance $SQLInstance -Query $mySQLquery -QueryTimeout 10 -erroraction SilentlyContinue
 }
 else
 {
-    $sqlresults = Invoke-SqlCmd -ServerInstance $SQLInstance -Query $mySQLquery -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
+    $sqlresults2 = Invoke-SqlCmd -ServerInstance $SQLInstance -Query $mySQLquery -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
 }
 
 # Create some CSS for help in column formatting during HTML exports
@@ -368,7 +357,7 @@ if(!(test-path -path "$fullfolderPath\HTMLReport.css"))
 }
 
 $RunTime = Get-date
-$sqlresults | select file_version, product_version, debug, patched, prerelease, private_build, special_build, language, company, description, name `
+$sqlresults2 | select file_version, product_version, debug, patched, prerelease, private_build, special_build, language, company, description, name `
 | ConvertTo-Html    -PostContent "<h3>Ran on : $RunTime</h3>" -PreContent "<h1>$SqlInstance</H1><H2>Loaded DLLs</h2>" -CSSUri "HtmlReport.css" | Set-Content "$fullfolderPath\02_Loaded_Dlls.html"
 
 
@@ -378,20 +367,16 @@ $mySQLquery2= "dbcc tracestatus()"
 # connect correctly
 if ($serverauth -eq "win")
 {
-    $sqlresults2 = Invoke-SqlCmd -ServerInstance $SQLInstance -Query $mySQLquery2 -QueryTimeout 10 -erroraction SilentlyContinue
+    $sqlresults3 = Invoke-SqlCmd -ServerInstance $SQLInstance -Query $mySQLquery2 -QueryTimeout 10 -erroraction SilentlyContinue
 }
 else
 {
-    $sqlresults2 = Invoke-SqlCmd -ServerInstance $SQLInstance -Query $mySQLquery2 -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
+    $sqlresults3 = Invoke-SqlCmd -ServerInstance $SQLInstance -Query $mySQLquery2 -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
 }
 
-if ($sqlresults2 -eq  $null)
+if ($sqlresults3 -ne  $null)
 {
-    
-}
-else
-{
-    $sqlresults2 | select TraceFlag, Status, Global, Session | ConvertTo-Html   -PostContent "<h3>Ran on : $RunTime</h3>" -PreContent "<h1>$SqlInstance</H1><H2>Trace Flags</h2>"  -CSSUri "HtmlReport.css" | Set-Content "$fullfolderPath\03_Trace_Flags.html"
+    $sqlresults3 | select TraceFlag, Status, Global, Session | ConvertTo-Html   -PostContent "<h3>Ran on : $RunTime</h3>" -PreContent "<h1>$SqlInstance</H1><H2>Trace Flags</h2>"  -CSSUri "HtmlReport.css" | Set-Content "$fullfolderPath\03_Trace_Flags.html"
 }
 
 

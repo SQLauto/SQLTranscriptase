@@ -105,15 +105,9 @@ function CopyObjectsToFiles($objects, $outDir) {
 			
 			$schemaPrefix = ""
 			
-            try
-            {
 			if ($o.Schema -ne $null -and $o.Schema -ne "") {
 				$schemaPrefix = $o.Schema + "."
 			}
-            }
-            catch
-            {
-            }
 		
 			$fixedOName = $o.name.replace('\','_')			
 			$scripter.Options.FileName = $outDir + $schemaPrefix + $fixedOName + ".sql"
@@ -194,7 +188,7 @@ $scripter.Options.ToFileOnly 			= $true
 $scripter.Options.WithDependencies		= $false
 $scripter.Options.XmlIndexes            = $true
 
-#Export Resource Governor Pools and Workgroups
+# Output Folder
 Set-Location $BaseFolder
 $output_path = "$BaseFolder\$SQLInstance\01 - Server Resource Governor\"
 if(!(test-path -path $output_path))
@@ -202,31 +196,39 @@ if(!(test-path -path $output_path))
         mkdir $output_path | Out-Null
     }
 
-#pools
-$pools = $srv.ResourceGovernor.ResourcePools | where-object -FilterScript {$_.Name -notin "internal","default"}
-if ($pools -ne $null)
+try
 {
-    CopyObjectsToFiles $pools $output_path
-}
-
-#Workgroups
-foreach ($pool in $pools)
-{
-    
-    #Put Workgroups in parent pool's folder
-    $pool_path = "$BaseFolder\$SQLInstance\01 - Server Resource Governor\"+$pool.Name+"\"
-    if(!(test-path -path $pool_path))
-        {
-            mkdir $pool_path | Out-Null
-        }
-    
-    #Workgroup
-    $workloadgroups = $pool.WorkloadGroups
-    foreach ($workloadgroup in $workloadgroups)
+    # Pools
+    $pools = $srv.ResourceGovernor.ResourcePools | where-object -FilterScript {$_.Name -notin "internal","default"}
+    if ($pools.Count -gt 0)
     {
-        CopyObjectsToFiles $workloadgroup $pool_path
+        CopyObjectsToFiles $pools $output_path
     }
-    
-} 
+
+    # Workgroups
+    foreach ($pool in $pools)
+    {
+        
+        #Put Workgroups in parent pool's folder
+        $pool_path = "$BaseFolder\$SQLInstance\01 - Server Resource Governor\"+$pool.Name+"\"
+        if(!(test-path -path $pool_path))
+            {
+                mkdir $pool_path | Out-Null
+            }
+        
+        #Workgroup
+        $workloadgroups = $pool.WorkloadGroups
+        foreach ($workloadgroup in $workloadgroups)
+        {
+            CopyObjectsToFiles $workloadgroup $pool_path
+        }
+        
+    } 
+}
+catch
+{
+    $fullfolderpath = "$BaseFolder\$SQLInstance\"
+    echo null > "$fullfolderpath\01 - Server Resource Governor - not setup or enabled.txt"
+}
 
 set-location $BaseFolder

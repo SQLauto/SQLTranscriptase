@@ -126,7 +126,7 @@ catch
                 mkdir $fullfolderPath | Out-Null
             }
 
-            Write-Host -b black -f red "No WMI connection to target server"
+            Write-Output "No WMI connection to target server"
             echo null > "$fullfolderpath\07 - Service Creds - WMI Could not connect.txt"
             Set-Location $BaseFolder
             exit
@@ -141,7 +141,7 @@ catch
             mkdir $fullfolderPath | Out-Null
         }
 
-        Write-Host -b black -f red "No WMI connection to target server"
+        Write-Output "No WMI connection to target server"
         echo null > "$fullfolderpath\07 - Service Creds - WMI Could not connect.txt"
         Set-Location $BaseFolder
         exit

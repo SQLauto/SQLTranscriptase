@@ -28,12 +28,18 @@
     
 #>
 
+
 Param(
   [string]$SQLInstance='localhost',
   [string]$myuser,
   [string]$mypass
 )
 
+
+
+
+
+Set-StrictMode -Version latest;
 
 [string]$BaseFolder = (Get-Item -Path ".\" -Verbose).FullName
 
@@ -166,7 +172,7 @@ if(!(test-path -path $output_path))
     }
 
 # Bail if Managed Backups not setup yet, nothing to do
-if ($srv.smartadmin.isenabled -eq "false")
+if ($srv.smartadmin.backupenabled -eq "false")
 {
     set-location $BaseFolder
     exit
@@ -238,6 +244,8 @@ else
 }
 
 # Script out
+[int]$countproperty = 0;
+
 foreach ($MB in $sqlresults)
 {    
     $db = $MB.db_name
@@ -266,12 +274,12 @@ foreach ($MB in $sqlresults)
     $myoutputstring | out-file -FilePath $myoutputfile -append -encoding ascii -width 500
 	
 	$fixedDBName
+
+    $countproperty = $countproperty +1;
 }
 
-if ($sqlresults.count -gt 0)
-{
-	Write-Output ("{0} Managed Backup Jobs Exported" -f $sqlresults.count)
-}
+Write-Output ("{0} Managed Backup Jobs Exported" -f $countproperty)
+
 
 # finish
 set-location $BaseFolder

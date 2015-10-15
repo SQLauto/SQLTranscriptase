@@ -58,6 +58,71 @@ if ($SQLInstance.Length -eq 0)
 Write-Output "Server $SQLInstance"
 
 
+# Server connection check
+try
+{
+    $old_ErrorActionPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'SilentlyContinue'
+
+    if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
+    {
+        Write-Output "Testing SQL Auth"
+        $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
+        $serverauth="sql"
+    }
+    else
+    {
+        Write-Output "Testing Windows Auth"
+    	$results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -QueryTimeout 10 -erroraction SilentlyContinue
+        $serverauth = "win"
+    }
+
+    if($results -ne $null)
+    {
+        Write-Output ("SQL Version: {0}" -f $results.Column1)
+    }
+
+    # Reset default PS error handler
+    $ErrorActionPreference = $old_ErrorActionPreference 	
+
+}
+catch
+{
+    Write-Host -f red "$SQLInstance appears offline - Try Windows Auth?"
+    Set-Location $BaseFolder
+	exit
+}
+
+
+# Check for Express version and exit - No Agent
+# Turn off default error handler
+$old_ErrorActionPreference = $ErrorActionPreference
+$ErrorActionPreference = 'SilentlyContinue'	
+
+$EditionSQL = "SELECT SERVERPROPERTY('Edition')"
+
+if ($serverauth -eq "win")
+{
+    $Edition = Invoke-SqlCmd -query $EditionSQL -Server $SQLInstance
+}
+else
+{
+    $Edition = Invoke-SqlCmd -query $EditionSQL  -Server $SQLInstance –Username $myuser –Password $mypass    
+}
+
+if ($Edition -ne $null )
+{
+    if ($edition.column1 -match "Express")
+    {
+        Write-Output ("Skipping '{0}'" -f $Edition.column1)
+        exit
+    }    
+}
+
+# Reset default PS error handler
+$ErrorActionPreference = $old_ErrorActionPreference 
+
+
 # SMO Connection
 $server = New-Object ('Microsoft.SqlServer.Management.Smo.Server') $SQLInstance
 

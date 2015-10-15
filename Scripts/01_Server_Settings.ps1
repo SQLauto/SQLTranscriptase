@@ -178,9 +178,13 @@ else
     $sqlresults = Invoke-SqlCmd -ServerInstance $SQLInstance -Query $mySQLquery -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
 }
 
-# Export it
+# Export BPE
+if ($?)
+{
 if ($sqlresults.state -eq 5)
 {
+    Write-Output "Buffer-Pool Extensions:"
+
     $strExport = "
     ALTER SERVER CONFIGURATION SET BUFFER POOL EXTENSION
     ON
@@ -190,6 +194,7 @@ if ($sqlresults.state -eq 5)
 "    );"
 
     $strExport | out-file "$output_path\Buffer_Pool_Extension.sql" -Encoding ascii
+}
 }
 
 set-location $BaseFolder

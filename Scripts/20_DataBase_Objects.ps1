@@ -27,7 +27,7 @@
     20_DataBase_Objects.ps1 server01 sa password
 
 .EXAMPLE
-    20_Database_Objects.ps1 -SQLInstance localhost -myuser username -mypass password -myDatabase AdventureWorks2014 -mytable Person.Address
+    20_Database_Objects.ps1 -SQLInstance localhost -myuser username -mypass password -myDatabase AdventureWorks2014 -myTable Person.Address
 
 .Inputs
     ServerName, [SQLUser], [SQLPassword], [myDatabase]
@@ -35,6 +35,8 @@
 .Outputs
 
 .NOTES
+    Use the -myDatabase parameter to just script out one database
+    Use the -myTable parameter to just script out one table (needs the Database parameter too)
 
 .LINK
 
@@ -52,6 +54,8 @@ Param(
 
 Set-StrictMode -Version latest;
 
+$DebugPreference = "Stop"
+
 [string]$BaseFolder = (Get-Item -Path ".\" -Verbose).FullName
 
 Write-Host  -f Yellow -b Black "20 - DataBase Objects (Triggers, Tables, Views, Procs, UDFs, FullTextCats, TableTypes, Schemas)"
@@ -64,6 +68,13 @@ LoadSQLSMO
 if ($SQLInstance.Length -eq 0) 
 {
     Write-host -f yellow "Usage: ./20_DataBase_Objects.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
+    exit
+}
+
+# Parameter check: Table needs Database
+if ($myTable.Length -gt 0 -and $myDatabase.Length -eq 0)
+{
+    Write-Output ("Please specify the -MyDatabase parameter when using -myTable with {0}" -f $mytable)
     exit
 }
 
@@ -125,9 +136,16 @@ function CopyObjectsToFiles($objects, $outDir) {
 			
 			$schemaPrefix = ""
 			
-			if ($o.Schema -ne $null -and $o.Schema -ne "") {
-				$schemaPrefix = $o.Schema + "."
-			}
+            try
+            {
+			    if ($o.Schema -ne $null -and $o.Schema -ne "") 
+                {
+    				$schemaPrefix = $o.Schema + "."
+			    }
+            }
+            catch
+            {
+            }
 		
 			$fixedOName = $o.name.replace('\','_')			
 			$scripter.Options.FileName = $outDir + $schemaPrefix + $fixedOName + ".sql"
@@ -289,6 +307,7 @@ $scripter.Options.SchemaQualify 		= $true
 $scripter.Options.SchemaQualifyForeignKeysReferences = $true
 
 $scripter.Options.ToFileOnly 			= $true
+$scripter.Options.Triggers              = $true
 
 
 # WithDependencies create one huge file for all tables in the order needed to maintain RefIntegrity
@@ -416,7 +435,7 @@ foreach($sqlDatabase in $srv.databases)
     # Tables
     Write-Output "$fixedDBName - Tables"
 
-    if ($mytable.Length -gt 0)
+    if ($mytable.Length -gt 0 -and $myDatabase -eq $sqldatabase.name)
 	{
         Write-Output ("Only for table {0}"-f $mytable)
         $tblSchema = ($mytable -split {$_ -eq "."})[0]
@@ -464,12 +483,6 @@ foreach($sqlDatabase in $srv.databases)
     Write-Output "$fixedDBName - Database Triggers"
     $DBTriggers	= $db.Triggers
     CopyObjectsToFiles $DBTriggers $DBTriggers_path
-
-
-    # Table Triggers
-    Write-Output "$fixedDBName - Table Triggers"
-    $TableTriggers = $db.Tables.Triggers
-    CopyObjectsToFiles $TableTriggers $TableTriggers_path
 
 
     # Schemas

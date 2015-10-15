@@ -237,11 +237,11 @@ foreach($sqlDatabase in $srv.databases)
         [system.version]$version = '1.0.0.0'
         $description = "Registered during DacPac Script-Out pass on "+(Get-Date).ToString()
         # Register as 1.0.0.0    
-        Write-Output "Registering $MyDB ..."
         try
         {
             $dac = new-object Microsoft.SqlServer.Dac.DacServices "server=$sqlinstance"
             $dac.register($myDB, $myDB, $version, $description)
+			Write-Output ("Registered Database {0}" -f $myDB)
         }
         catch
         {

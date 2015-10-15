@@ -52,6 +52,12 @@ if ($SQLInstance.Length -eq 0)
 # Working
 Write-Output "Server $SQLInstance"
 
+# Output folder
+$fullfolderPath = "$BaseFolder\$sqlinstance\01 - Server Storage\"
+if(!(test-path -path $fullfolderPath))
+{
+    mkdir $fullfolderPath | Out-Null
+}
 
 # Split out servername only from named instance
 $WinServer = ($SQLInstance -split {$_ -eq "," -or $_ -eq "\"})[0]
@@ -75,9 +81,6 @@ try
     }
     else
     {
-        #Warn User
-        Write-Host -b black -f red "Access Denied using WMI against target server"
-        
         $fullfolderpath = "$BaseFolder\$SQLInstance\"
         if(!(test-path -path $fullfolderPath))
         {
@@ -92,9 +95,6 @@ try
 }
 catch
 {
-    #Warn User
-    Write-Host -b black -f red "Access Denied using WMI against target server"
- 
     $fullfolderpath = "$BaseFolder\$SQLInstance\"
     if(!(test-path -path $fullfolderPath))
     {
@@ -108,13 +108,6 @@ catch
 
 # Reset default PS error handler - WMI error trapping
 $ErrorActionPreference = $old_ErrorActionPreference 
-
-
-$fullfolderPath = "$BaseFolder\$sqlinstance\01 - Server Storage\"
-if(!(test-path -path $fullfolderPath))
-{
-    mkdir $fullfolderPath | Out-Null
-}
 
 
 # Create some CSS for help in column formatting

@@ -182,17 +182,12 @@ Foreach ($row in $results)
 	Add-Content -Value "`r`n" -Path "$fullfolderPath\DBMail_Accounts.sql" -Encoding Ascii
 }
 
-
 try
 {
-    if ($results.count -ne $null)
-    {
-        Write-Output ("{0} DBMail Accounts Exported" -f $results.count)
-    }
+    Write-Output ("{0} DBMail Accounts Exported" -f $results.count)
 }
-catch
-{
-}
+catch {}
+
 
 
 set-location $BaseFolder
