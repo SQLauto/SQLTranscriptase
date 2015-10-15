@@ -29,8 +29,6 @@
 .NOTES
 
     https://msdn.microsoft.com/en-us/library/microsoft.analysisservices(v=sql.120).aspx
-	
-
 
 	George Walkey
 	Richmond, VA USA
@@ -78,6 +76,7 @@ Write-Output "Server $SQLInstance"
 [System.Reflection.Assembly]::LoadWithPartialName("Microsoft.AnalysisServices") | out-null
 [System.Reflection.Assembly]::LoadWithPartialName("System.Xml") | out-null
 
+$encoding = [System.Text.Encoding]::UTF8
 
 ## connect to the server 
 try

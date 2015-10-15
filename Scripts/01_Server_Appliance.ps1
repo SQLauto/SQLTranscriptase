@@ -67,7 +67,10 @@ Write-Output "Server $SQLInstance"
 $WinServer = ($SQLInstance -split {$_ -eq "," -or $_ -eq "\"})[0]
 
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> origin/master
 # Server connection check
 [string]$serverauth = "win"
 if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
