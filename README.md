@@ -22,9 +22,11 @@ http://www.sqlsaturday.com/422/eventhome.aspx
 Orlando, FL - October 10, 2015<br>
 http://www.sqlsaturday.com/452/eventhome.aspx
 
-<b>Upcoming Presentations:</b>
-
 Charlotte, NC - October 17, 2015<br>
 http://www.sqlsaturday.com/442/eventhome.aspx
+
+<b>Upcoming Presentations:</b>
+
+
 
 
