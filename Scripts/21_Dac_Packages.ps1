@@ -68,7 +68,41 @@ LoadSQLSMO
 
 
 # Load Additional Assemblies
-add-type -path "C:\Program Files (x86)\Microsoft SQL Server\120\DAC\bin\Microsoft.SqlServer.Dac.dll"
+$dacver = $null;
+$dacdll = "C:\Program Files (x86)\Microsoft SQL Server\100\DAC\bin\Microsoft.SqlServer.Dac.dll"
+if((test-path -path $dacdll))
+{
+    $dacver = 2008
+    add-type -path "C:\Program Files (x86)\Microsoft SQL Server\100\DAC\bin\Microsoft.SqlServer.Dac.dll"
+}
+
+$dacdll = "C:\Program Files (x86)\Microsoft SQL Server\110\DAC\bin\Microsoft.SqlServer.Dac.dll"
+if((test-path -path $dacdll))
+{
+    $dacver = 2012
+    add-type -path "C:\Program Files (x86)\Microsoft SQL Server\110\DAC\bin\Microsoft.SqlServer.Dac.dll"
+}
+
+$dacdll = "C:\Program Files (x86)\Microsoft SQL Server\120\DAC\bin\Microsoft.SqlServer.Dac.dll"
+if((test-path -path $dacdll))
+{
+    $dacver = 2014
+    add-type -path "C:\Program Files (x86)\Microsoft SQL Server\120\DAC\bin\Microsoft.SqlServer.Dac.dll"
+}
+
+$dacdll = "C:\Program Files (x86)\Microsoft SQL Server\130\DAC\bin\Microsoft.SqlServer.Dac.dll"
+if((test-path -path $dacdll))
+{
+    $dacver = 2016
+    add-type -path "C:\Program Files (x86)\Microsoft SQL Server\130\DAC\bin\Microsoft.SqlServer.Dac.dll"
+}
+
+If (!($dacver))
+{
+    Write-Output "Microsoft.SqlServer.Dac.dll not found, exiting"
+    exit
+}
+
 
 
 

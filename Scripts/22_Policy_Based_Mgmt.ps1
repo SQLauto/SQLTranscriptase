@@ -53,8 +53,43 @@ Write-Output "Server $SQLInstance"
 Import-Module ".\LoadSQLSmo.psm1"
 LoadSQLSMO
 
+
 # Load Additional Assemblies
-add-type -path "C:\Program Files (x86)\Microsoft SQL Server\120\SDK\Assemblies\Microsoft.SqlServer.Dmf.dll"
+$dmfver = $null;
+$dmfdll = "C:\Program Files (x86)\Microsoft SQL Server\100\SDK\Assemblies\Microsoft.SqlServer.Dmf.dll"
+if((test-path -path $dmfdll))
+{
+    $dmfver = 2008
+    add-type -path "C:\Program Files (x86)\Microsoft SQL Server\100\SDK\Assemblies\Microsoft.SqlServer.Dmf.dll"
+}
+
+$dmfdll = "C:\Program Files (x86)\Microsoft SQL Server\110\SDK\Assemblies\Microsoft.SqlServer.Dmf.dll"
+if((test-path -path $dmfdll))
+{
+    $dmfver = 2012
+    add-type -path "C:\Program Files (x86)\Microsoft SQL Server\110\SDK\Assemblies\Microsoft.SqlServer.Dmf.dll"
+}
+
+$dmfdll = "C:\Program Files (x86)\Microsoft SQL Server\120\SDK\Assemblies\Microsoft.SqlServer.Dmf.dll"
+if((test-path -path $dmfdll))
+{
+    $dmfver = 2014
+    add-type -path "C:\Program Files (x86)\Microsoft SQL Server\120\SDK\Assemblies\Microsoft.SqlServer.Dmf.dll"
+}
+
+$dmfdll = "C:\Program Files (x86)\Microsoft SQL Server\130\SDK\Assemblies\Microsoft.SqlServer.Dmf.dll"
+if((test-path -path $dmfdll))
+{
+    $dmfver = 2016
+    add-type -path "C:\Program Files (x86)\Microsoft SQL Server\130\SDK\Assemblies\Microsoft.SqlServer.Dmf.dll"
+}
+
+If (!($dmfver))
+{
+    Write-Output "Microsoft.SqlServer.Dmf.dll not found, exiting"
+    exit
+}
+
 
 
 # Server connection check
