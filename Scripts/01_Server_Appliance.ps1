@@ -250,6 +250,7 @@ catch
 " " | out-file $fullFileName -Encoding ascii -Append
 
 # Hardware
+# Motherboard
 # Turn off default Error Handler for WMI
 $old_ErrorActionPreference = $ErrorActionPreference
 $ErrorActionPreference = 'SilentlyContinue'
@@ -271,6 +272,7 @@ catch
 
 " " | out-file $fullFileName -Encoding ascii -Append
 
+# Proc, CPUs, Cores
 # Turn off default Error Handler for WMI
 $old_ErrorActionPreference = $ErrorActionPreference
 $ErrorActionPreference = 'SilentlyContinue'
@@ -293,6 +295,30 @@ catch
 }
 
 " " | out-file $fullFileName -Encoding ascii -Append
+
+# PowerPlan
+# Turn off default Error Handler for WMI
+$old_ErrorActionPreference = $ErrorActionPreference
+$ErrorActionPreference = 'SilentlyContinue'
+
+$mystring41 = Get-WmiObject -namespace "root\cimv2\power" –class Win32_PowerPlan -ComputerName $server | where {$_.IsActive} | select ElementName
+
+# Reset default PS error handler
+$ErrorActionPreference = $old_ErrorActionPreference
+
+try
+{
+    Write-output ("PowerPlan: {0} " -f $mystring41.ElementName)| out-file $fullFileName -Encoding ascii -Append    
+}
+catch
+{
+    Write-output "Error getting PowerPlan via WMI - WMI/Firewall issue? "| out-file $fullFileName -Encoding ascii -Append
+    Write-output "Error getting PowerPlan via WMI - WMI/Firewall issue? "
+}
+
+" " | out-file $fullFileName -Encoding ascii -Append
+
+
 
 $mystring5 =  "`r`nSQL Build reference: http://sqlserverbuilds.blogspot.com/ "
 $mystring5| out-file $fullFileName -Encoding ascii -Append
