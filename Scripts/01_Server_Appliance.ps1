@@ -22,7 +22,7 @@
 
 	
 .LINK
-
+	https://github.com/gwalkey/SQLTranscriptase
 	
 #>
 
@@ -319,7 +319,25 @@ catch
 " " | out-file $fullFileName -Encoding ascii -Append
 
 
+# PowerShell Version
+$old_ErrorActionPreference = $ErrorActionPreference
+$ErrorActionPreference = 'SilentlyContinue'
 
+$MyPSVersion = Invoke-Command -ComputerName $SQLInstance -ScriptBlock {$PSVersionTable.PSVersion.Major}
+if ($MyPSVersion -ne $null)
+{    
+    $mystring =  "Powershell Version: " +$myPSVersion
+}
+else
+{
+    $mystring =  "Powershell Version: Unknown"
+}
+$mystring | out-file $fullFileName -Encoding ascii -Append
+
+
+$ErrorActionPreference = $old_ErrorActionPreference
+
+# Footer
 $mystring5 =  "`r`nSQL Build reference: http://sqlserverbuilds.blogspot.com/ "
 $mystring5| out-file $fullFileName -Encoding ascii -Append
 
