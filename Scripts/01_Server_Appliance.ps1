@@ -68,46 +68,80 @@ $WinServer = ($SQLInstance -split {$_ -eq "," -or $_ -eq "\"})[0]
 
 
 # Server connection check
-[string]$serverauth = "win"
-if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
+try
 {
-	Write-Output "Testing SQL Auth"
-	try
+    $old_ErrorActionPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'SilentlyContinue'
+
+    if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
     {
-        $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
-        if($results -ne $null)
-        {
-            $myver = $results.Column1
-            Write-Output $myver
-            $serverauth="sql"
-        }	
-	}
-	catch
+        Write-Output "Testing SQL Auth"
+		# .NET Method
+		# Open connection and Execute sql against server
+		$DataSet = New-Object System.Data.DataSet
+		$SQLConnectionString = "Data Source=$SQLInstance;User ID=$myuser;Password=$mypass;"
+		$Connection = New-Object System.Data.SqlClient.SqlConnection
+		$Connection.ConnectionString = $SQLConnectionString
+		$SqlCmd = New-Object System.Data.SqlClient.SqlCommand
+		$SqlCmd.CommandText = "select serverproperty('productversion')"
+		$SqlCmd.Connection = $Connection
+		$SqlAdapter = New-Object System.Data.SqlClient.SqlDataAdapter
+		$SqlAdapter.SelectCommand = $SqlCmd
+    
+		# Insert results into Dataset table
+		$SqlAdapter.Fill($DataSet) | out-null
+
+		# Close connection to sql server
+		$Connection.Close()
+		$results = $DataSet.Tables[0].Rows[0]
+
+		# SQLCMD.EXE Method
+        #$results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
+        $serverauth="sql"
+    }
+    else
     {
-		Write-Host -f red "$SQLInstance appears offline - Try Windows Auth?"
-        Set-Location $BaseFolder
-		exit
-	}
+        Write-Output "Testing Windows Auth"
+		# .NET Method
+		# Open connection and Execute sql against server using Windows Auth
+		$DataSet = New-Object System.Data.DataSet
+		$SQLConnectionString = "Data Source=$SQLInstance;Integrated Security=SSPI;"
+		$Connection = New-Object System.Data.SqlClient.SqlConnection
+		$Connection.ConnectionString = $SQLConnectionString
+		$SqlCmd = New-Object System.Data.SqlClient.SqlCommand
+		$SqlCmd.CommandText = "select serverproperty('productversion')"
+		$SqlCmd.Connection = $Connection
+		$SqlAdapter = New-Object System.Data.SqlClient.SqlDataAdapter
+		$SqlAdapter.SelectCommand = $SqlCmd
+    
+		# Insert results into Dataset table
+		$SqlAdapter.Fill($DataSet) | out-null
+
+		# Close connection to sql server
+		$Connection.Close()
+		$results = $DataSet.Tables[0].Rows[0]
+
+		# SQLCMD.EXE Method
+    	#$results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -QueryTimeout 10 -erroraction SilentlyContinue
+        $serverauth = "win"
+    }
+
+    if($results -ne $null)
+    {
+        Write-Output ("SQL Version: {0}" -f $results.Column1)
+    }
+
+    # Reset default PS error handler
+    $ErrorActionPreference = $old_ErrorActionPreference 	
+
 }
-else
+catch
 {
-	Write-Output "Testing Windows Auth"
- 	Try
-    {
-        $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -QueryTimeout 10 -erroraction SilentlyContinue
-        if($results -ne $null)
-        {
-            $myver = $results.Column1
-            Write-Output $myver
-        }
-	}
-	catch
-    {
-	    Write-Host -f red "$SQLInstance appears offline - Try SQL Auth?" 
-        set-location $BaseFolder
-	    exit
-	}
+    Write-Host -f red "$SQLInstance appears offline - Try Windows Authorization."
+    Set-Location $BaseFolder
+	exit
 }
+
 
 # Create folder
 $fullfolderPath = "$BaseFolder\$sqlinstance\01 - Server Appliance"
@@ -250,6 +284,7 @@ catch
 " " | out-file $fullFileName -Encoding ascii -Append
 
 # Hardware
+
 # Motherboard
 # Turn off default Error Handler for WMI
 $old_ErrorActionPreference = $ErrorActionPreference
@@ -295,6 +330,7 @@ catch
 }
 
 " " | out-file $fullFileName -Encoding ascii -Append
+
 
 # PowerPlan
 # Turn off default Error Handler for WMI

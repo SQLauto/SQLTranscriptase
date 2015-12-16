@@ -89,13 +89,53 @@ try
     if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
     {
         Write-Output "Testing SQL Auth"
-        $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
+		# .NET Method
+		# Open connection and Execute sql against server
+		$DataSet = New-Object System.Data.DataSet
+		$SQLConnectionString = "Data Source=$SQLInstance;User ID=$myuser;Password=$mypass;"
+		$Connection = New-Object System.Data.SqlClient.SqlConnection
+		$Connection.ConnectionString = $SQLConnectionString
+		$SqlCmd = New-Object System.Data.SqlClient.SqlCommand
+		$SqlCmd.CommandText = "select serverproperty('productversion')"
+		$SqlCmd.Connection = $Connection
+		$SqlAdapter = New-Object System.Data.SqlClient.SqlDataAdapter
+		$SqlAdapter.SelectCommand = $SqlCmd
+    
+		# Insert results into Dataset table
+		$SqlAdapter.Fill($DataSet) | out-null
+
+		# Close connection to sql server
+		$Connection.Close()
+		$results = $DataSet.Tables[0].Rows[0]
+
+		# SQLCMD.EXE Method
+        #$results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
         $serverauth="sql"
     }
     else
     {
         Write-Output "Testing Windows Auth"
-    	$results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -QueryTimeout 10 -erroraction SilentlyContinue
+		# .NET Method
+		# Open connection and Execute sql against server using Windows Auth
+		$DataSet = New-Object System.Data.DataSet
+		$SQLConnectionString = "Data Source=$SQLInstance;Integrated Security=SSPI;"
+		$Connection = New-Object System.Data.SqlClient.SqlConnection
+		$Connection.ConnectionString = $SQLConnectionString
+		$SqlCmd = New-Object System.Data.SqlClient.SqlCommand
+		$SqlCmd.CommandText = "select serverproperty('productversion')"
+		$SqlCmd.Connection = $Connection
+		$SqlAdapter = New-Object System.Data.SqlClient.SqlDataAdapter
+		$SqlAdapter.SelectCommand = $SqlCmd
+    
+		# Insert results into Dataset table
+		$SqlAdapter.Fill($DataSet) | out-null
+
+		# Close connection to sql server
+		$Connection.Close()
+		$results = $DataSet.Tables[0].Rows[0]
+
+		# SQLCMD.EXE Method
+    	#$results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -QueryTimeout 10 -erroraction SilentlyContinue
         $serverauth = "win"
     }
 
@@ -110,10 +150,11 @@ try
 }
 catch
 {
-    Write-Host -f red "$SQLInstance appears offline - Try Windows Auth?"
+    Write-Host -f red "$SQLInstance appears offline - Try Windows Authorization."
     Set-Location $BaseFolder
 	exit
 }
+
 
 
 # Check for Express version and exit - No Agent
@@ -151,12 +192,53 @@ $ErrorActionPreference = 'SilentlyContinue'
 if ($serverauth -eq "win")
 {
 	Write-Output "Using Windows Auth"
-    $Outdata = Invoke-SqlCmd -query $sql -Server $SQLInstance
+
+	# .NET Method
+	# Open connection and Execute sql against server using Windows Auth
+	$DataSet = New-Object System.Data.DataSet
+	$SQLConnectionString = "Data Source=$SQLInstance;Integrated Security=SSPI;"
+	$Connection = New-Object System.Data.SqlClient.SqlConnection
+	$Connection.ConnectionString = $SQLConnectionString
+	$SqlCmd = New-Object System.Data.SqlClient.SqlCommand
+	$SqlCmd.CommandText = $sql
+	$SqlCmd.Connection = $Connection
+	$SqlAdapter = New-Object System.Data.SqlClient.SqlDataAdapter
+	$SqlAdapter.SelectCommand = $SqlCmd
+    
+	# Insert results into Dataset table
+	$SqlAdapter.Fill($DataSet) | out-null
+
+	# Close connection to sql server
+	$Connection.Close()
+	$outdata = $DataSet.Tables[0].Rows
+
+
+    #$outdata = Invoke-SqlCmd -query $sql -Server $SQLInstance
 }
 else
 {
     Write-Output "Using SQL Auth"
-    $outdata = Invoke-SqlCmd -query $sql  -Server $SQLInstance –Username $myuser –Password $mypass    
+    
+    # .NET Method
+	# Open connection and Execute sql against server
+	$DataSet = New-Object System.Data.DataSet
+	$SQLConnectionString = "Data Source=$SQLInstance;User ID=$myuser;Password=$mypass;"
+	$Connection = New-Object System.Data.SqlClient.SqlConnection
+	$Connection.ConnectionString = $SQLConnectionString
+	$SqlCmd = New-Object System.Data.SqlClient.SqlCommand
+	$SqlCmd.CommandText = $sql
+	$SqlCmd.Connection = $Connection
+	$SqlAdapter = New-Object System.Data.SqlClient.SqlDataAdapter
+	$SqlAdapter.SelectCommand = $SqlCmd
+    
+	# Insert results into Dataset table
+	$SqlAdapter.Fill($DataSet) | out-null
+
+	# Close connection to sql server
+	$Connection.Close()
+	$outdata = $DataSet.Tables[0].Rows
+    
+    #$outdata = Invoke-SqlCmd -query $sql  -Server $SQLInstance –Username $myuser –Password $mypass    
 }
 
 if ($outdata -eq $null )
@@ -778,11 +860,50 @@ order by StartHour, Sked, job
 # Get the Agent Job Sked from SQL
 if ($serverauth -eq "win")
 {
-    $LiveSkeds =  Invoke-Sqlcmd -MaxCharLength 100000000 -ServerInstance $SQLInstance -Query $sql2
+	# .NET Method
+	# Open connection and Execute sql against server using Windows Auth
+	$DataSet = New-Object System.Data.DataSet
+	$SQLConnectionString = "Data Source=$SQLInstance;Integrated Security=SSPI;"
+	$Connection = New-Object System.Data.SqlClient.SqlConnection
+	$Connection.ConnectionString = $SQLConnectionString
+	$SqlCmd = New-Object System.Data.SqlClient.SqlCommand
+	$SqlCmd.CommandText = $sql2
+	$SqlCmd.Connection = $Connection
+	$SqlAdapter = New-Object System.Data.SqlClient.SqlDataAdapter
+	$SqlAdapter.SelectCommand = $SqlCmd
+    
+	# Insert results into Dataset table
+	$SqlAdapter.Fill($DataSet) | out-null
+
+	# Close connection to sql server
+	$Connection.Close()
+	$LiveSkeds = $DataSet.Tables[0].Rows
+
+    #$LiveSkeds =  Invoke-Sqlcmd -MaxCharLength 100000000 -ServerInstance $SQLInstance -Query $sql2
 }
 else
 {
-    $LiveSkeds =  Invoke-Sqlcmd -MaxCharLength 100000000 -ServerInstance $SQLInstance -Username $myuser -Password $mypass -Query $sql2
+    # .NET Method
+	# Open connection and Execute sql against server
+	$DataSet = New-Object System.Data.DataSet
+	$SQLConnectionString = "Data Source=$SQLInstance;User ID=$myuser;Password=$mypass;"
+	$Connection = New-Object System.Data.SqlClient.SqlConnection
+	$Connection.ConnectionString = $SQLConnectionString
+	$SqlCmd = New-Object System.Data.SqlClient.SqlCommand
+	$SqlCmd.CommandText = $sql2
+	$SqlCmd.Connection = $Connection
+	$SqlAdapter = New-Object System.Data.SqlClient.SqlDataAdapter
+	$SqlAdapter.SelectCommand = $SqlCmd
+    
+	# Insert results into Dataset table
+	$SqlAdapter.Fill($DataSet) | out-null
+
+	# Close connection to sql server
+	$Connection.Close()
+	$LiveSkeds = $DataSet.Tables[0].Rows
+
+
+    #$LiveSkeds =  Invoke-Sqlcmd -MaxCharLength 100000000 -ServerInstance $SQLInstance -Username $myuser -Password $mypass -Query $sql2
 }
 
 

@@ -83,45 +83,78 @@ Write-Output "Server $SQLInstance"
 
 
 # Server connection check
-$serverauth = "win"
-if ($mypass.Length -gt 0 -and $myuser.Length -gt 0) 
+try
 {
-	Write-Output "Testing SQL Auth"
-	try
+    $old_ErrorActionPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'SilentlyContinue'
+
+    if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
     {
-        $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
-        if($results -ne $null)
-        {
-            $myver = $results.Column1
-            Write-Output $myver
-            $serverauth="sql"
-        }	
-	}
-	catch
+        Write-Output "Testing SQL Auth"
+		# .NET Method
+		# Open connection and Execute sql against server
+		$DataSet = New-Object System.Data.DataSet
+		$SQLConnectionString = "Data Source=$SQLInstance;User ID=$myuser;Password=$mypass;"
+		$Connection = New-Object System.Data.SqlClient.SqlConnection
+		$Connection.ConnectionString = $SQLConnectionString
+		$SqlCmd = New-Object System.Data.SqlClient.SqlCommand
+		$SqlCmd.CommandText = "select serverproperty('productversion')"
+		$SqlCmd.Connection = $Connection
+		$SqlAdapter = New-Object System.Data.SqlClient.SqlDataAdapter
+		$SqlAdapter.SelectCommand = $SqlCmd
+    
+		# Insert results into Dataset table
+		$SqlAdapter.Fill($DataSet) | out-null
+
+		# Close connection to sql server
+		$Connection.Close()
+		$results = $DataSet.Tables[0].Rows[0]
+
+		# SQLCMD.EXE Method
+        #$results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
+        $serverauth="sql"
+    }
+    else
     {
-		Write-Host -f red "$SQLInstance appears offline - Try Windows Auth?"
-        Set-Location $BaseFolder
-		exit
-	}
-}
-else
-{
-	Write-Output "Testing Windows Auth"
- 	Try{
-    $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -QueryTimeout 10 -erroraction SilentlyContinue
+        Write-Output "Testing Windows Auth"
+		# .NET Method
+		# Open connection and Execute sql against server using Windows Auth
+		$DataSet = New-Object System.Data.DataSet
+		$SQLConnectionString = "Data Source=$SQLInstance;Integrated Security=SSPI;"
+		$Connection = New-Object System.Data.SqlClient.SqlConnection
+		$Connection.ConnectionString = $SQLConnectionString
+		$SqlCmd = New-Object System.Data.SqlClient.SqlCommand
+		$SqlCmd.CommandText = "select serverproperty('productversion')"
+		$SqlCmd.Connection = $Connection
+		$SqlAdapter = New-Object System.Data.SqlClient.SqlDataAdapter
+		$SqlAdapter.SelectCommand = $SqlCmd
+    
+		# Insert results into Dataset table
+		$SqlAdapter.Fill($DataSet) | out-null
+
+		# Close connection to sql server
+		$Connection.Close()
+		$results = $DataSet.Tables[0].Rows[0]
+
+		# SQLCMD.EXE Method
+    	#$results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -QueryTimeout 10 -erroraction SilentlyContinue
+        $serverauth = "win"
+    }
+
     if($results -ne $null)
     {
-        $myver = $results.Column1
-        Write-Output $myver
+        Write-Output ("SQL Version: {0}" -f $results.Column1)
     }
-	}
-	catch
-    {
-	    Write-Host -f red "$SQLInstance appears offline - Try SQL Auth?" 
-        Set-Location $BaseFolder
-	    exit
-	}
 
+    # Reset default PS error handler
+    $ErrorActionPreference = $old_ErrorActionPreference 	
+
+}
+catch
+{
+    Write-Host -f red "$SQLInstance appears offline - Try Windows Authorization."
+    Set-Location $BaseFolder
+	exit
 }
 
 function CopyObjectsToFiles($objects, $outDir) {
@@ -234,20 +267,60 @@ SELECT
     physical_name as 'FileName',
     type_desc as 'Type',
     state_desc as 'State',
-	is_percent_growth,
-	CONVERT(bigint, growth/128.0) AS [Growth_in_MB],
-    CONVERT(bigint, size/128.0) AS [Total_Size_in_MB]
+	case when is_percent_growth=1 then '%' else 'MB' end as 'Growth',
+	case when is_percent_growth=1 then growth else CONVERT(float, growth/128.0) end AS [Growth_in_MB],
+    CONVERT(float, size/128.0) AS [DB_Size_in_MB]
 FROM sys.master_files WITH (NOLOCK)
 ORDER BY DB_NAME([database_id]) OPTION (RECOMPILE);
 "
 #Run SQL
 if ($serverauth -eq "win")
 {
-    $sqlresultsX = Invoke-SqlCmd -ServerInstance $SQLInstance -Query $mySQLquery -QueryTimeout 10 -erroraction SilentlyContinue
+    # .Net Method
+	# Open connection and Execute sql against server using Windows Auth
+	$DataSet = New-Object System.Data.DataSet
+	$SQLConnectionString = "Data Source=$SQLInstance;Integrated Security=SSPI;"
+	$Connection = New-Object System.Data.SqlClient.SqlConnection
+	$Connection.ConnectionString = $SQLConnectionString
+	$SqlCmd = New-Object System.Data.SqlClient.SqlCommand
+	$SqlCmd.CommandText = $mySQLquery
+	$SqlCmd.Connection = $Connection
+	$SqlAdapter = New-Object System.Data.SqlClient.SqlDataAdapter
+	$SqlAdapter.SelectCommand = $SqlCmd
+    
+	# Insert results into Dataset table
+	$SqlAdapter.Fill($DataSet) |out-null
+
+	# Close connection to sql server
+	$Connection.Close()
+	$sqlresultsX = $DataSet.Tables[0].Rows
+
+    # SQLCMD.EXE Method
+    #$sqlresultsX = Invoke-SqlCmd -ServerInstance $SQLInstance -Query $mySQLquery -QueryTimeout 10 -erroraction SilentlyContinue
 }
 else
 {
-    $sqlresultsX = Invoke-SqlCmd -ServerInstance $SQLInstance -Query $mySQLquery -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
+    # .Net Method
+	# Open connection and Execute sql against server
+	$DataSet = New-Object System.Data.DataSet
+	$SQLConnectionString = "Data Source=$SQLInstance;User ID=$myuser;Password=$mypass;"
+	$Connection = New-Object System.Data.SqlClient.SqlConnection
+	$Connection.ConnectionString = $SQLConnectionString
+	$SqlCmd = New-Object System.Data.SqlClient.SqlCommand
+	$SqlCmd.CommandText = $mySQLquery
+	$SqlCmd.Connection = $Connection
+	$SqlAdapter = New-Object System.Data.SqlClient.SqlDataAdapter
+	$SqlAdapter.SelectCommand = $SqlCmd
+    
+	# Insert results into Dataset table
+	$SqlAdapter.Fill($DataSet) |out-null
+
+	# Close connection to sql server
+	$Connection.Close()
+	$sqlresultsX = $DataSet.Tables[0].Rows
+
+    # SQLCMD.EXE Method
+    #$sqlresultsX = Invoke-SqlCmd -ServerInstance $SQLInstance -Query $mySQLquery -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
 }
 
 $RunTime = Get-date
@@ -257,7 +330,7 @@ if(!(test-path -path $FullFolderPath))
     mkdir $FullFolderPath | Out-Null
 }
 $myCSS | out-file "$FullFolderPath\HTMLReport.css" -Encoding ascii
-$sqlresultsX | select Database_Name,file_id, Name, FileName, Type, State, is_percent_growth,growth_in_mb, Total_size_in_MB | ConvertTo-Html -PreContent "<h1>$SqlInstance</H1><H2>Database Summary</h2>" -PostContent "<h3>Ran on : $RunTime</h3>" -CSSUri "HtmlReport.css"| Set-Content "$FullFolderPath\Database_Summary.html"
+$sqlresultsX | select Database_Name,file_id, Name, FileName, Type, State, growth, growth_in_mb, DB_Size_in_MB | ConvertTo-Html -PreContent "<h1>$SqlInstance</H1><H2>Database Summary</h2>" -PostContent "<h3>Ran on : $RunTime</h3>" -CSSUri "HtmlReport.css"| Set-Content "$FullFolderPath\Database_Summary.html"
 
 # Add your favorite options from 
 # https://msdn.microsoft.com/en-us/library/microsoft.sqlserver.management.smo.scriptingoptions.aspx
@@ -505,6 +578,7 @@ foreach($sqlDatabase in $srv.databases)
     # List Filegroups, Files and Path
     Write-Output "$fixedDBName - FileGroups"
 
+    # Process FileGroups
     # Create output folder
     $myoutputfile = $Filegroups_path+"Filegroups.txt"
     if(!(test-path -path $Filegroups_path))
@@ -516,7 +590,7 @@ foreach($sqlDatabase in $srv.databases)
     out-file -filepath $myoutputfile -encoding ascii -Force
     Add-Content -path $myoutputfile -value "FileGroupName:          DatabaseFileName:           FilePath:"
 
-    # Prep SQL
+    # Prep SQL for Filegroups
     $mySQLquery = "USE $db; SELECT `
     cast(sysFG.name as char(24)) AS FileGroupName,
     cast(dbfile.name as char(28)) AS DatabaseFileName,
@@ -533,11 +607,50 @@ foreach($sqlDatabase in $srv.databases)
     #Run SQL
     if ($serverauth -eq "win")
     {
-        $sqlresults2 = Invoke-SqlCmd -ServerInstance $SQLInstance -Query $mySQLquery -QueryTimeout 10 -erroraction SilentlyContinue
+        # .Net Method
+	    # Open connection and Execute sql against server using Windows Auth
+    	$DataSet = New-Object System.Data.DataSet
+    	$SQLConnectionString = "Data Source=$SQLInstance;Integrated Security=SSPI;"
+    	$Connection = New-Object System.Data.SqlClient.SqlConnection
+    	$Connection.ConnectionString = $SQLConnectionString
+    	$SqlCmd = New-Object System.Data.SqlClient.SqlCommand
+    	$SqlCmd.CommandText = $mySQLquery
+    	$SqlCmd.Connection = $Connection
+    	$SqlAdapter = New-Object System.Data.SqlClient.SqlDataAdapter
+    	$SqlAdapter.SelectCommand = $SqlCmd
+    
+    	# Insert results into Dataset table
+    	$SqlAdapter.Fill($DataSet) |out-null
+
+    	# Close connection to sql server
+    	$Connection.Close()
+	    $sqlresults2 = $DataSet.Tables[0].Rows   		
+
+        # SQLCMD.EXE Method
+        # $sqlresults2 = Invoke-SqlCmd -ServerInstance $SQLInstance -Query $mySQLquery -QueryTimeout 10 -erroraction SilentlyContinue
     }
     else
     {
-        $sqlresults2 = Invoke-SqlCmd -ServerInstance $SQLInstance -Query $mySQLquery -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
+        # .Net Method
+	    # Open connection and Execute sql against server
+	    $DataSet = New-Object System.Data.DataSet
+	    $SQLConnectionString = "Data Source=$SQLInstance;User ID=$myuser;Password=$mypass;"
+	    $Connection = New-Object System.Data.SqlClient.SqlConnection
+	    $Connection.ConnectionString = $SQLConnectionString
+	    $SqlCmd = New-Object System.Data.SqlClient.SqlCommand
+	    $SqlCmd.CommandText = $mySQLquery
+	    $SqlCmd.Connection = $Connection
+	    $SqlAdapter = New-Object System.Data.SqlClient.SqlDataAdapter
+	    $SqlAdapter.SelectCommand = $SqlCmd
+    
+	    # Insert results into Dataset table
+	    $SqlAdapter.Fill($DataSet) |out-null
+
+    	# Close connection to sql server
+    	$Connection.Close()
+    	$sqlresults2 = $DataSet.Tables[0].Rows        
+
+        # $sqlresults2 = Invoke-SqlCmd -ServerInstance $SQLInstance -Query $mySQLquery -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
     }
 
     # Script Out

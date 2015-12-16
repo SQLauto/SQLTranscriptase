@@ -37,11 +37,23 @@
 	
 #>
 
+
+<#
+Param(
+  [string]$SQLInstance="dmzsql2",
+  [string]$myuser="dmzdba",
+  [string]$mypass="tiGe3HTkq93F7p0ZS4vd"
+)
+#>
+
+
+
 Param(
   [string]$SQLInstance="localhost",
   [string]$myuser,
   [string]$mypass
 )
+
 
 Set-StrictMode -Version latest;
 
@@ -54,12 +66,184 @@ LoadSQLSMO
 # Load More Assemblies
 
 
-# First, test for Domain Membership 
+#  Script Name
+Write-Host  -f Yellow -b Black "01 - Server Logins"
+
+
+# Usage Check
+if ($SQLInstance.Length -eq 0) 
+{
+    Write-host -f yellow "Usage: ./01_Server_Logins.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
+    Set-Location $BaseFolder
+    exit
+}
+
+# Working
+Write-Output "Server $SQLInstance"
+
+# Server connection check
+try
+{
+    $old_ErrorActionPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'SilentlyContinue'
+
+    if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
+    {
+        Write-Output "Testing SQL Auth"
+		# .NET Method
+		# Open connection and Execute sql against server
+		$DataSet = New-Object System.Data.DataSet
+		$SQLConnectionString = "Data Source=$SQLInstance;User ID=$myuser;Password=$mypass;"
+		$Connection = New-Object System.Data.SqlClient.SqlConnection
+		$Connection.ConnectionString = $SQLConnectionString
+		$SqlCmd = New-Object System.Data.SqlClient.SqlCommand
+		$SqlCmd.CommandText = "select serverproperty('productversion')"
+		$SqlCmd.Connection = $Connection
+		$SqlAdapter = New-Object System.Data.SqlClient.SqlDataAdapter
+		$SqlAdapter.SelectCommand = $SqlCmd
+    
+		# Insert results into Dataset table
+		$SqlAdapter.Fill($DataSet) |out-null
+
+		# Close connection to sql server
+		$Connection.Close()
+		$results = $DataSet.Tables[0].Rows[0]
+
+		# SQLCMD.EXE Method
+        #$results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
+        $serverauth="sql"
+    }
+    else
+    {
+        Write-Output "Testing Windows Auth"
+		# .NET Method
+		# Open connection and Execute sql against server using Windows Auth
+		$DataSet = New-Object System.Data.DataSet
+		$SQLConnectionString = "Data Source=$SQLInstance;Integrated Security=SSPI;"
+		$Connection = New-Object System.Data.SqlClient.SqlConnection
+		$Connection.ConnectionString = $SQLConnectionString
+		$SqlCmd = New-Object System.Data.SqlClient.SqlCommand
+		$SqlCmd.CommandText = "select serverproperty('productversion')"
+		$SqlCmd.Connection = $Connection
+		$SqlAdapter = New-Object System.Data.SqlClient.SqlDataAdapter
+		$SqlAdapter.SelectCommand = $SqlCmd
+    
+		# Insert results into Dataset table
+		$SqlAdapter.Fill($DataSet) |out-null
+
+		# Close connection to sql server
+		$Connection.Close()
+		$results = $DataSet.Tables[0].Rows[0]
+
+		# SQLCMD.EXE Method
+    	#$results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -QueryTimeout 10 -erroraction SilentlyContinue
+        $serverauth = "win"
+    }
+
+    if($results -ne $null)
+    {
+        Write-Output ("SQL Version: {0}" -f $results.Column1)
+    }
+
+    # Reset default PS error handler
+    $ErrorActionPreference = $old_ErrorActionPreference 	
+
+}
+catch
+{
+    Write-Host -f red "$SQLInstance appears offline - Try Windows Authorization."
+    Set-Location $BaseFolder
+	exit
+}
+
+
+function CopyObjectsToFiles($objects, $outDir) {
+	
+	if (-not (Test-Path $outDir)) {
+		[System.IO.Directory]::CreateDirectory($outDir) | out-null
+	}
+	
+	foreach ($o in $objects) { 
+	
+		if ($o -ne $null) {
+			
+			$schemaPrefix = ""
+			
+            try
+            {
+			    if ($o.Schema -ne $null -and $o.Schema -ne "") 
+                {
+				    $schemaPrefix = $o.Schema + "."
+			    }
+            }
+            catch 
+            {
+            }
+		
+			$fixedOName = $o.name.replace('\','_')			
+			$scripter.Options.FileName = $outDir + $schemaPrefix + $fixedOName + ".sql"
+			$scripter.EnumScript($o)
+		}
+	}
+}
+
+# Set Local Vars
+$server = $SQLInstance
+
+
+
+
+<#
+# Get Target Server Domain Membership
+
+# Trap Errors
+$old_ErrorActionPreference = $ErrorActionPreference
+$ErrorActionPreference = 'SilentlyContinue'
+
 $OnDomain = $false
 if ((gwmi win32_computersystem).partofdomain -eq $true) 
 {
     $OnDomain = $true
 }
+
+# Reset default PS error handler - for WMI error trapping
+$ErrorActionPreference = $old_ErrorActionPreference 
+#>
+
+
+# Create SMO Object to Server
+if ($serverauth -eq "win")
+{
+    $srv        = New-Object "Microsoft.SqlServer.Management.SMO.Server" $server
+    $scripter 	= New-Object "Microsoft.SqlServer.Management.SMO.Scripter" $server
+}
+else
+{
+    $srv        = New-Object "Microsoft.SqlServer.Management.SMO.Server" $server
+    $srv.ConnectionContext.LoginSecure=$false
+    $srv.ConnectionContext.set_Login($myuser)
+    $srv.ConnectionContext.set_Password($mypass)    
+    $scripter   = New-Object ("Microsoft.SqlServer.Management.SMO.Scripter") ($srv)
+}
+
+# Set scripter options to ensure only schema is scripted
+$scripter.Options.ScriptSchema 	        = $true;
+$scripter.Options.ScriptData 	        = $false;
+$scripter.Options.ToFileOnly 			= $true;
+
+
+# The SMO ActiveDirectory Object holds Domain/Workgroup membership status of the Target Server
+$OnDomain = $false
+if ($srv.ActiveDirectory -ne $null)
+{
+    $OnDomain = $true
+    Write-Output ("Server On Domain? Yes")
+}
+else
+{
+    Write-Output ("Server On Domain? No")
+}
+
 
 # If we are part of a Domain, Load the AD Module if it is installed on the user's system
 if ($OnDomain -eq $true)
@@ -100,109 +284,8 @@ if ($OnDomain -eq $true)
 }
 else
 {
-    Write-Output "NOT on a Domain - Resolving of AD Group User Memberships Disabled"
+    Write-Output "Target Server is NOT in a Domain - Resolving of AD Group User Memberships Disabled"
 }
-
-#  Script Name
-Write-Host  -f Yellow -b Black "01 - Server Logins"
-
-
-# Usage Check
-if ($SQLInstance.Length -eq 0) 
-{
-    Write-host -f yellow "Usage: ./01_Server_Logins.ps1 `"SQLServerName`" ([`"Username`"] [`"Password`"] if DMZ machine)"
-    Set-Location $BaseFolder
-    exit
-}
-
-# Working
-Write-Output "Server $SQLInstance"
-
-# Server connection check
-try
-{
-    $old_ErrorActionPreference = $ErrorActionPreference
-    $ErrorActionPreference = 'SilentlyContinue'
-
-    if ($mypass.Length -ge 1 -and $myuser.Length -ge 1) 
-    {
-        Write-Output "Testing SQL Auth"
-        $results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -Username $myuser -Password $mypass -QueryTimeout 10 -erroraction SilentlyContinue
-        $serverauth="sql"
-    }
-    else
-    {
-        Write-Output "Testing Windows Auth"
-    	$results = Invoke-SqlCmd -ServerInstance $SQLInstance -Query "select serverproperty('productversion')" -QueryTimeout 10 -erroraction SilentlyContinue
-        $serverauth = "win"
-    }
-
-    if($results -ne $null)
-    {
-        Write-Output ("SQL Version: {0}" -f $results.Column1)
-    }
-
-    # Reset default PS error handler
-    $ErrorActionPreference = $old_ErrorActionPreference 	
-
-}
-catch
-{
-    Write-Host -f red "$SQLInstance appears offline - Try Windows Authorization."
-    Set-Location $BaseFolder
-	exit
-}
-
-
-function CopyObjectsToFiles($objects, $outDir) {
-	
-	if (-not (Test-Path $outDir)) {
-		[System.IO.Directory]::CreateDirectory($outDir) | out-null
-	}
-	
-	foreach ($o in $objects) { 
-	
-		if ($o -ne $null) {
-			
-			$schemaPrefix = ""
-			
-            try
-            {
-			if ($o.Schema -ne $null -and $o.Schema -ne "") {
-				$schemaPrefix = $o.Schema + "."
-			}
-            }
-            catch {}
-		
-			$fixedOName = $o.name.replace('\','_')			
-			$scripter.Options.FileName = $outDir + $schemaPrefix + $fixedOName + ".sql"
-			$scripter.EnumScript($o)
-		}
-	}
-}
-
-# Set Local Vars
-$server = $SQLInstance
-
-if ($serverauth -eq "win")
-{
-    $srv        = New-Object "Microsoft.SqlServer.Management.SMO.Server" $server
-    $scripter 	= New-Object "Microsoft.SqlServer.Management.SMO.Scripter" $server
-}
-else
-{
-    $srv        = New-Object "Microsoft.SqlServer.Management.SMO.Server" $server
-    $srv.ConnectionContext.LoginSecure=$false
-    $srv.ConnectionContext.set_Login($myuser)
-    $srv.ConnectionContext.set_Password($mypass)    
-    $scripter   = New-Object ("Microsoft.SqlServer.Management.SMO.Scripter") ($srv)
-}
-
-
-# Set scripter options to ensure only schema is scripted
-$scripter.Options.ScriptSchema 	        = $true;
-$scripter.Options.ScriptData 	        = $false;
-$scripter.Options.ToFileOnly 			= $true;
 
 
 # Create base output folder
@@ -241,6 +324,8 @@ $logins = $srv.Logins
 foreach ($Login in $Logins)
 {
 
+    #Write-Output ("Name: {0}, Creation Date:{1}, Last Mod: {2}" -f $login.name, $login.CreateDate, $Login.DateLastModified)
+
     # Skip non-Domain logins that look like Domain Logins (contain "\")
     if ($Login.Name -like "NT SERVICE\*") {continue}
     if ($Login.Name -like "NT AUTHORITY\*") {continue}    
@@ -251,8 +336,7 @@ foreach ($Login in $Logins)
     if ($Login.Name -eq "##MS_SQLEnableSystemAssemblyLoadingUser##") {continue}
     if ($Login.Name -eq "##MS_SSISServerCleanupJobLogin##") {continue}
 
-
-    # Windows Domain Groups
+    # Process Windows Domain Groups
     if ($OnDomain -eq $true -and $ADModuleExists -eq $true -and $Login.LoginType -eq "WindowsGroup")
     {
 
@@ -291,21 +375,90 @@ foreach ($Login in $Logins)
         # Create the Users of this Group
         foreach($ADUser in $ADGroupUsers)
         {   
+            $Sam = $ADUser.SamAccountName            
 
-            $CreateObjectName = "CREATE LOGIN ["+$ADDomain+"\"+$ADUser.SamAccountName+"] FROM WINDOWS WITH DEFAULT_DATABASE=[master], DEFAULT_LANGUAGE=[us_english] "
+            # Check Disabled Attribute
+            $MyAdUser = Get-ADUser -LDAPFilter "(samaccountname=$Sam)"
+            If ($MyAdUser.enabled -eq $false)
+            {
+                #Write-Output $Sam
+                $CreateObjectName = "CREATE LOGIN ["+$ADDomain+"\"+$ADUser.SamAccountName+"] FROM WINDOWS WITH DEFAULT_DATABASE=[master], DEFAULT_LANGUAGE=[us_english]; "+ "`r ALTER LOGIN ["+$ADDomain+"\"+$ADUser.SamAccountName+"] DISABLE;"
+            }
+            else
+            {
+                $CreateObjectName = "CREATE LOGIN ["+$ADDomain+"\"+$ADUser.SamAccountName+"] FROM WINDOWS WITH DEFAULT_DATABASE=[master], DEFAULT_LANGUAGE=[us_english] "
+            }
             $CreateObjectName | out-file -FilePath $myoutputfile -append -Encoding ascii
         }
     }
 
 
-    # Windows Domain Users
+    # Process Windows Users (Domain or Workgroup)
     if ($Login.LoginType -eq "WindowsUser")
     {
         Write-Output ("Scripting out: {0}" -f $Login.Name)
-        CopyObjectsToFiles $login $WinUsersPath
+        #CopyObjectsToFiles $login $WinUsersPath
+
+        $fixedFileName2 = $Login.name.replace('\','_')
+        # If the Ad Module is loaded and the Target Server is on a DOMAIN, do an AD Lookup to get the Account Enabled status, else SMO does the scripting
+        if ($OnDomain -eq $true -and $ADModuleExists -eq $true )
+        {
+         
+            # Get Target Server Domain if not same as ours, example DMZ Servers
+            $ADDomain = ($Login.Name -split {$_ -eq "," -or $_ -eq "\"})[0]
+            
+
+            # Remote Domain <> Our Domain means we are talking to a Workgroup Server using Local Accounts
+            if ($ADDomain -eq $SQLInstance)
+            {
+                $MyAdUser = ($Login.Name -split {$_ -eq "," -or $_ -eq "\"})[1]
+            }
+            else
+            {
+                # Regular Domain Account on same Domain as us
+                $SAM = $Login.Name.Replace($ADDomain+"\",'')
+                $MyAdUser = Get-ADUser -LDAPFilter "(SamAccountName=$SAM)"
+                # If AD lookup returns a NULL object for the SAM, Assume the Account is a LOCAL WINDOWS Account, not an AD Account
+                if ($myAdUser -eq $null)
+                {
+                    # Is a Local Windows Account
+                    if ($Login.IsDisabled -eq $true)
+                    {
+                        $CreateObjectName = "CREATE LOGIN ["+$Login.Name+"] FROM WINDOWS WITH DEFAULT_DATABASE=[master], DEFAULT_LANGUAGE=[us_english]; "+ "`r ALTER LOGIN ["+$Login.Name+"] DISABLE;"
+                    }
+                    else
+                    {
+                        $CreateObjectName = "CREATE LOGIN ["+$Login.Name+"] FROM WINDOWS WITH DEFAULT_DATABASE=[master], DEFAULT_LANGUAGE=[us_english]; "
+                    }
+                }
+                else
+                {
+                    # Is an actual AD Account
+                    if ($MyAdUser.enabled -eq $false)
+                    {                    
+                        $CreateObjectName = "CREATE LOGIN ["+$Login.Name+"] FROM WINDOWS WITH DEFAULT_DATABASE=[master], DEFAULT_LANGUAGE=[us_english]; "+ "`r ALTER LOGIN ["+$Login.Name+"] DISABLE;"
+                    }
+                    else            
+                    {
+                        $CreateObjectName = "CREATE LOGIN ["+$Login.Name+"] FROM WINDOWS WITH DEFAULT_DATABASE=[master], DEFAULT_LANGUAGE=[us_english];"
+                    }
+                }
+            }
+
+            # output
+            $MyScriptingFilePath = $WinUsersPath+"\"+$fixedFileName2+".sql"
+            $CreateObjectName | out-file -FilePath $MyScriptingFilePath -Encoding ascii -Force
+        }
+        else
+        {
+            # Not on Domain or AD Module not loaded, get Windows User's object's property directly            
+            $SQLCreateLogin = $Login.Script()
+            $MyScriptingFilePath = $WinUsersPath+"\"+$fixedFileName2+".sql"
+            $SQLCreateLogin | out-file -FilePath $MyScriptingFilePath -Encoding ascii -Force
+        }
     }
 
-    # SQL Auth
+    # Process SQL Auth Users
     if ($Login.LoginType -eq "SQLLogin")
     {
         Write-Output ("Scripting out: {0}" -f $Login.Name)
@@ -316,3 +469,4 @@ foreach ($Login in $Logins)
  
 
 set-location $BaseFolder
+
