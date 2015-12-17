@@ -154,7 +154,7 @@ select [event_session_id],[name] from sys.server_event_sessions
 "
 
 # Connect Correctly
-[string]
+
 if ($serverauth -eq "sql") 
 {
 	Write-Output "Using Sql Auth"	
