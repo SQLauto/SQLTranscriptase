@@ -174,10 +174,9 @@ Add-Content -Value "Server Hardware and Software Capabilities for $SQLInstance `
 
 # SQL
 $mySQLQuery1 = 
-"SELECT @@SERVERNAME AS [Server Name], create_date AS 'column1' 
-FROM sys.server_principals WITH (NOLOCK)
-WHERE name = N'NT AUTHORITY\SYSTEM'
-OR name = N'NT AUTHORITY\NETWORK SERVICE' OPTION (RECOMPILE);
+"SELECT	[updatedate] AS 'column1'
+FROM	[sys].[syslogins]
+WHERE	[sid] = 0x01
 "
 
 # connect correctly
